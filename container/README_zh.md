@@ -1,23 +1,23 @@
-# EasyGS Docker Guide
+# EasyGS Docker 使用指南
 
-This guide explains how to run EasyGS with Docker. The container includes the EasyGS Python package, Web UI, bridge service, and the conda environments required by the GS analysis tools.
+本文档介绍如何使用 Docker 运行 EasyGS。容器内已包含 EasyGS Python 包、Web UI、bridge 服务，以及 GS 分析工具所需的 conda 环境。
 
-For the Chinese version, see [README_zh.md](README_zh.md).
+English version: [README.md](README.md).
 
-## When to Use Docker
+## 什么时候使用 Docker
 
-Use Docker if you want a reproducible runtime without installing conda, R packages, PLINK, bcftools, or EasyGS directly on the host.
+如果你希望在宿主机上不安装 conda、R 包、PLINK、bcftools 或 EasyGS 本体，同时获得统一的运行环境，可以使用 Docker。
 
-The container still needs two mounted host directories:
+容器运行时仍然需要挂载两个宿主机目录：
 
-- `easygs-home`: mounted to `/home/easygs/.easygs`, used for `config.json`, workspace outputs, resources, history, and runtime state.
-- `data`: mounted to `/data`, used for user input datasets.
+- `easygs-home`：挂载到 `/home/easygs/.easygs`，用于保存 `config.json`、工作区输出、资源文件、历史记录和运行状态。
+- `data`：挂载到 `/data`，用于保存用户输入数据。
 
-Inside EasyGS, always refer to mounted data files with `/data/...` paths.
+在 EasyGS 中引用输入数据时，请始终使用容器内路径 `/data/...`。
 
-## Quick Start with Docker Compose
+## 使用 Docker Compose 快速启动
 
-From the project root:
+在项目根目录执行：
 
 ```bash
 cd /path/to/easygs
@@ -25,7 +25,7 @@ cp .env.example .env
 mkdir -p ./easygs-home ./data
 ```
 
-Edit `.env`:
+编辑 `.env`：
 
 ```dotenv
 EASYGS_IMAGE=your-dockerhub-name/easygs:analysis
@@ -37,52 +37,52 @@ DEEPSEEK_API_KEY=your-api-key
 DEEPSEEK_API_BASE=your-api-base
 ```
 
-Fill only the provider credentials you use. Common providers include `DEEPSEEK_API_KEY`, `ZHIPU_API_KEY`, `MOONSHOT_API_KEY`, `MINIMAX_API_KEY`, `DASHSCOPE_API_KEY`, and `CUSTOM_API_KEY`.
+只需要填写你实际使用的 provider 凭证。常见 provider 包括 `DEEPSEEK_API_KEY`、`ZHIPU_API_KEY`、`MOONSHOT_API_KEY`、`MINIMAX_API_KEY`、`DASHSCOPE_API_KEY` 和 `CUSTOM_API_KEY`。
 
-Start EasyGS:
+启动 EasyGS：
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Open the Web UI:
+打开 Web UI：
 
 ```text
 http://127.0.0.1:25685
 ```
 
-If EasyGS runs on a remote server, forward the port from your own computer:
+如果 EasyGS 运行在远程服务器上，请先在自己的电脑上建立端口转发：
 
 ```bash
 ssh -L 25685:127.0.0.1:25685 user@server_ip
 ```
 
-Then open `http://127.0.0.1:25685` in your local browser.
+然后在本机浏览器打开 `http://127.0.0.1:25685`。
 
-## Build a Local Image
+## 构建本地镜像
 
-If you want to build the image locally instead of using a published image:
+如果你希望从源码构建本地镜像：
 
 ```bash
 cd /path/to/easygs
 container/build.sh
 ```
 
-This builds:
+默认会构建：
 
 ```text
 easygs:analysis
 ```
 
-The build defaults to China-friendly mirrors:
+构建脚本默认使用国内较友好的镜像源：
 
-- Debian: TUNA
-- Miniforge / conda: TUNA
-- npm: npmmirror
-- PyPI: TUNA
+- Debian：TUNA
+- Miniforge / conda：TUNA
+- npm：npmmirror
+- PyPI：TUNA
 
-You can override mirrors at build time:
+也可以在构建时切换镜像源：
 
 ```bash
 container/build.sh analysis \
@@ -92,7 +92,7 @@ container/build.sh analysis \
   --build-arg MINIFORGE_URL=https://mirrors.bfsu.edu.cn/github-release/conda-forge/miniforge/LatestRelease/Miniforge3-Linux-x86_64.sh
 ```
 
-After building, you can run the local image with the compose file under `container/`:
+构建完成后，可以使用 `container/` 目录下的 compose 文件运行本地镜像：
 
 ```bash
 cd container
@@ -100,7 +100,7 @@ cp .env.example .env
 mkdir -p ./easygs-home /path/to/your/data
 ```
 
-Edit `container/.env`:
+编辑 `container/.env`：
 
 ```dotenv
 EASYGS_HOME_DIR=./easygs-home
@@ -111,15 +111,15 @@ DEEPSEEK_API_KEY=your-api-key
 DEEPSEEK_API_BASE=your-api-base
 ```
 
-Then start:
+然后启动：
 
 ```bash
 docker compose up -d
 ```
 
-## Run with `docker run`
+## 使用 `docker run`
 
-You can also run the image directly:
+也可以直接运行镜像：
 
 ```bash
 docker run --rm -it \
@@ -132,15 +132,15 @@ docker run --rm -it \
   easygs:analysis
 ```
 
-When no command is provided, the container starts:
+如果没有额外传入命令，容器会默认启动：
 
 ```bash
 easygs gateway --research-mode
 ```
 
-## Run EasyGS Commands
+## 运行 EasyGS 命令
 
-Pass a command after the image name to run EasyGS CLI commands:
+在镜像名后追加命令，可以运行 EasyGS CLI：
 
 ```bash
 docker run --rm -it \
@@ -154,38 +154,38 @@ docker run --rm -it \
   easygs:analysis easygs agent
 ```
 
-## Workspace and Resources
+## 工作区和外部资源
 
-Outputs are written to the EasyGS workspace inside the container:
+分析输出会写入容器内 EasyGS 工作区：
 
 ```text
 /home/easygs/.easygs/workspace
 ```
 
-With the compose examples above, this maps to:
+使用上面的 compose 示例时，对应宿主机路径为：
 
 ```text
 ./easygs-home/workspace
 ```
 
-Some tools require large reference files that are not bundled into the image. Put external resources under:
+部分工具需要大型参考文件，这些资源不会打包进镜像。请将外部资源放在：
 
 ```text
 ./easygs-home/resources
 ```
 
-For example:
+例如：
 
 ```text
 ./easygs-home/resources/pfam_enrichment_analysis/all_maize_longest_cds.txt
 ./easygs-home/resources/pfam_enrichment_analysis/all_maize_genes_proteins.fa.tsv
 ```
 
-## Channels and Notifications
+## 消息渠道和通知
 
-Docker Compose exposes environment variables for Feishu/Lark and standalone SMTP notifications.
+Docker Compose 已提供飞书和独立 SMTP 通知相关环境变量。
 
-For Feishu/Lark, set:
+飞书 / Lark 配置示例：
 
 ```dotenv
 FEISHU_ENABLED=true
@@ -196,7 +196,7 @@ FEISHU_VERIFICATION_TOKEN=your-verification-token
 FEISHU_ALLOW_FROM=[]
 ```
 
-For task-completion email notifications, set:
+任务完成邮件通知配置示例：
 
 ```dotenv
 EMAIL_NOTIFY_ENABLED=true
@@ -208,9 +208,9 @@ EMAIL_NOTIFY_FROM_ADDRESS=from@example.com
 EMAIL_NOTIFY_TO_ADDRESS=to@example.com
 ```
 
-## Check Analysis Environments
+## 检查分析环境
 
-The image contains the conda environments used by EasyGS analysis tools:
+镜像内包含 EasyGS 分析工具使用的 conda 环境：
 
 ```bash
 docker run --rm \
@@ -229,9 +229,9 @@ docker run --rm \
   easygs:analysis mamba run -n EasyGS_2 command -v plink
 ```
 
-## Notes
+## 注意事项
 
-- The compose files use `network_mode: host`, so the Web UI listens on the host at `127.0.0.1:25685`.
-- The container entrypoint requires both `/home/easygs/.easygs` and `/data` to be mounted.
-- The entrypoint creates a default `config.json` if one does not exist, then applies `EASYGS_...__...` environment-variable overrides.
-- If you change model or provider settings in `.env`, restart the container with `docker compose up -d`.
+- compose 文件使用 `network_mode: host`，Web UI 会在宿主机 `127.0.0.1:25685` 监听。
+- 容器入口脚本要求同时挂载 `/home/easygs/.easygs` 和 `/data`。
+- 如果 `config.json` 不存在，入口脚本会自动创建默认配置，然后应用 `EASYGS_...__...` 环境变量覆盖。
+- 修改 `.env` 中的模型或 provider 配置后，请使用 `docker compose up -d` 重启容器。

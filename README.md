@@ -77,6 +77,9 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 
 ## :raising_hand: Installation
 
+> [!WARNING]
+> EasyGS is an AI Agent that can execute analysis tasks and may create, modify, or delete files. Use it in a test or dedicated working directory, and back up important data in advance. Direct production use is not recommended.
+
 The easiest way to use EasyGS is to install it locally.
 
 ### 1. Requirements
@@ -312,7 +315,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Inside the container, use `/data/...` paths to refer to mounted data files. For more details, see [container/README.md](container/README.md).
+Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected provider are configured. Inside the container, use `/data/...` paths to refer to mounted data files. For more details, see [container/README.md](container/README.md).
 
 ## :clap: 39 GS Analysis Tools
 

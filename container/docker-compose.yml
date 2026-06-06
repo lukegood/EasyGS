@@ -6,7 +6,7 @@ services:
       dockerfile: container/Dockerfile
     network_mode: host
     environment:
-      EASYGS_AGENTS__DEFAULTS__MODEL: ${EASYGS_MODEL:-anthropic/claude-opus-4-5}
+      EASYGS_AGENTS__DEFAULTS__MODEL: ${EASYGS_MODEL:-deepseek-v4-pro}
       EASYGS_PROVIDERS__CUSTOM__API_KEY: ${CUSTOM_API_KEY:-}
       EASYGS_PROVIDERS__CUSTOM__API_BASE: ${CUSTOM_API_BASE:-}
       EASYGS_PROVIDERS__ANTHROPIC__API_KEY: ${ANTHROPIC_API_KEY:-}
