@@ -16,7 +16,7 @@
 
 EasyGS is an AI agent for crop genomic selection analysis. Users can describe their analysis needs in natural language, and EasyGS helps check input files, complete parameters, call human-verified GS analysis workflows, and organize output results, helping you complete GS analysis tasks.
 
-## :raised_hands: Why Choose EasyGS?
+## :raised_hands: Why EasyGS?
 
 - **Professional GS analysis capabilities**: 39 human-reviewed and validated GS analysis tools covering common steps such as data QC, population structure, genetic parameter estimation, genomic prediction, environmental interaction, GWAS, and functional annotation.
 - **Natural-language driven**: submit analysis tasks involving VCF files, phenotype data, environmental factors, gene annotation, and more through conversation without manually writing code.
@@ -72,7 +72,8 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
     </tr>
   </table>
 </div>
-**More tools are waiting for you to explore...**
+
+<p align="center"><strong>More tools are waiting for you to explore...</strong></p>
 
 ## :raising_hand: Installation
 
