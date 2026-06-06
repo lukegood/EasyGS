@@ -18,28 +18,61 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 
 ## :raised_hands: Why Choose EasyGS?
 
-- Professional GS analysis capabilities: 39 human-reviewed and validated GS analysis tools covering common steps such as data QC, population structure, genetic parameter estimation, genomic prediction, environmental interaction, GWAS, and functional annotation.
-- Natural-language driven: submit analysis tasks involving VCF files, phenotype data, environmental factors, gene annotation, and more through conversation without manually writing code.
-- Long tasks run in the background: tasks execute in the background, so you do not need to worry about interruptions.
-- Fully traceable: check analysis progress at any time, keep intermediate results for every step, and review the workflow whenever needed.
-- Local execution: files do not need to be uploaded. A file path is enough for easy local data management.
-- Flexible usage: use EasyGS through the Web UI, command line, Telegram, Feishu/Lark, and other messaging channels, so you can choose the workflow that suits you.
+- **Professional GS analysis capabilities**: 39 human-reviewed and validated GS analysis tools covering common steps such as data QC, population structure, genetic parameter estimation, genomic prediction, environmental interaction, GWAS, and functional annotation.
+- **Natural-language driven**: submit analysis tasks involving VCF files, phenotype data, environmental factors, gene annotation, and more through conversation without manually writing code.
+- **Long tasks run in the background**: tasks execute in the background, so you do not need to worry about interruptions.
+- **Fully traceable**: check analysis progress at any time, keep intermediate results for every step, and review the workflow whenever needed.
+- **Flexible usage**: use EasyGS through the Web UI, command line, Telegram, Feishu/Lark, and other messaging channels, so you can choose the workflow that suits you.
 
 ## :earth_asia: Interface Preview
 
+<table>
+  <tr>
+    <td align="center" width="55%">
+      <h3>Web UI</h3>
+      <p>Chat with EasyGS in your browser, simply and efficiently</p>
+      <img src="pics/WebUI.png" alt="EasyGS local Web UI" width="520">
+    </td>
+    <td align="center" width="45%">
+      <h3>Multiple Chat Integrations</h3>
+      <p>Use EasyGS through Telegram, Feishu/Lark, and other messaging channels, including on mobile devices</p>
+      <img src="pics/feishuui.png" alt="EasyGS Feishu messaging interface" width="420">
+    </td>
+  </tr>
+</table>
+
+## :earth_asia: Feature Preview
+
+<table>
+  <tr>
+    <td align="center" width="60%">
+      <h3>Real-Time Workflow Query</h3>
+      <p>Check the status, progress, and results of background analysis tasks at any time</p>
+      <img src="pics/gzlxq.png" alt="EasyGS real-time workflow query" width="560">
+    </td>
+    <td align="center" width="40%">
+      <h3>Fully Traceable Process</h3>
+      <p>Keep analysis steps and intermediate results for easy workflow review</p>
+      <img src="pics/bzzz.png" alt="EasyGS fully traceable process" width="280">
+    </td>
+  </tr>
+</table>
+
 <div align="center">
-
-  <h3>Web UI</h3>
-  <p>Chat with EasyGS in your browser, simply and efficiently</p>
-  <img src="pics/WebUI.png" alt="EasyGS local Web UI" width="900">
-
-  <br>
-
-  <h3>Multiple Chat Integrations</h3>
-  <p>Use EasyGS through Telegram, Feishu/Lark, and other messaging channels, including on mobile devices</p>
-  <img src="pics/feishuui.png" alt="EasyGS Feishu messaging interface" width="520">
-
+  <h3>Diverse GS Analysis Tools</h3>
+  <p>Covering common workflows such as data QC/genomic prediction, GWAS, environmental interaction, correlation analysis, functional annotation, and more...</p>
+  <table>
+    <tr>
+      <td align="center" width="50%">
+        <img src="pics/gwas.jpg" alt="EasyGS GS analysis result example" width="430">
+      </td>
+      <td align="center" width="50%">
+        <img src="pics/bxxgx.png" alt="EasyGS GS analysis result example" width="430">
+      </td>
+    </tr>
+  </table>
 </div>
+More tools are waiting for you to explore...
 
 ## :raising_hand: Installation
 

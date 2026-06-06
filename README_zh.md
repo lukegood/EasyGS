@@ -17,28 +17,61 @@
 EasyGS是一个面向作物基因组选择分析的AIAgent。用户可以用自然语言描述分析需求，EasyGS会协助检查输入文件、补全参数、调用经人工验证的GS分析流程，并整理输出结果，帮助您完成GS分析任务。
 
 ## :raised_hands: 为什么选择EasyGS?
-- 专业的GS分析能力: 39种经人工审查和验证的GS分析工具，覆盖数据质控、群体结构、遗传参数估计、基因组预测、环境互作、GWAS 和功能注释等常用环节。
-- 自然语言驱动：用对话方式提交VCF、表型、环境因子、基因注释等分析任务，无需手工编写代码。
-- 长任务后台运行：任务后台执行，不担心中断。
-- 全程可追溯：随时查看分析进展，保留每一步的中间结果，可随时复盘。
-- 本地执行：文件无需上传，只需要路径便可轻松管理。
-- 灵活的使用方式：支持Web UI、命令行、Telegram、飞书等消息渠道，总有适合您的方式。
+- **专业的GS分析能力**: 39种经人工审查和验证的GS分析工具，覆盖数据质控、群体结构、遗传参数估计、基因组预测、环境互作、GWAS 和功能注释等常用环节。
+- **自然语言驱动**：用对话方式提交VCF、表型、环境因子、基因注释等分析任务，无需手工编写代码。
+- **长任务后台运行**：任务后台执行，不担心中断。
+- **全程可追溯**：随时查看分析进展，保留每一步的中间结果，可随时复盘。
+- **灵活的使用方式**：支持Web UI、命令行、Telegram、飞书等消息渠道，总有适合您的方式。
 
 ## :earth_asia: 界面展示
 
+<table>
+  <tr>
+    <td align="center" width="55%">
+      <h3>Web UI</h3>
+      <p>在浏览器中与EasyGS对话，简洁高效</p>
+      <img src="pics/WebUI.png" alt="EasyGS 本地 WebUI" width="520">
+    </td>
+    <td align="center" width="45%">
+      <h3>多种聊天软件接入</h3>
+      <p>通过Telegram、飞书等消息渠道使用EasyGS，支持移动端使用</p>
+      <img src="pics/feishuui.png" alt="EasyGS 飞书消息界面" width="420">
+    </td>
+  </tr>
+</table>
+
+## :earth_asia: 功能展示
+
+<table>
+  <tr>
+    <td align="center" width="60%">
+      <h3>工作流实时查询</h3>
+      <p>后台分析任务可随时查看状态、进度和结果</p>
+      <img src="pics/gzlxq.png" alt="EasyGS 工作流实时查询" width="560">
+    </td>
+    <td align="center" width="40%">
+      <h3>全流程可追溯</h3>
+      <p>保留分析步骤和中间结果，便于复盘分析过程</p>
+      <img src="pics/bzzz.png" alt="EasyGS 全流程可追溯" width="280">
+    </td>
+  </tr>
+</table>
+
 <div align="center">
-
-  <h3>Web UI</h3>
-  <p>在浏览器中与EasyGS对话，简洁高效</p>
-  <img src="pics/WebUI.png" alt="EasyGS 本地 WebUI" width="900">
-
-  <br>
-
-  <h3>多种聊天软件接入</h3>
-  <p>通过Telegram、飞书等消息渠道使用EasyGS，支持移动端使用</p>
-  <img src="pics/feishuui.png" alt="EasyGS 飞书消息界面" width="520">
-
+  <h3>多样的GS分析工具</h3>
+  <p>覆盖数据质控/基因组预测、GWAS、环境互作、相关性分析、功能注释等常用流程...</p>
+  <table>
+    <tr>
+      <td align="center" width="50%">
+        <img src="pics/gwas.jpg" alt="EasyGS GS 分析结果示例" width="430">
+      </td>
+      <td align="center" width="50%">
+        <img src="pics/bxxgx.png" alt="EasyGS GS 分析结果示例" width="430">
+      </td>
+    </tr>
+  </table>
 </div>
+更多工具等你探索...
 
 ## :raising_hand: 安装
 
