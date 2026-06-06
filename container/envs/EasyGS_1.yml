@@ -1,0 +1,37 @@
+name: EasyGS_1
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - statsmodels
+  - scikit-learn
+  - scikit-allel
+  - bcftools
+  - bedtools
+  - htslib
+  - tabix
+  - r-base
+  - r-bigmemory
+  - r-bigmemory.sri
+  - r-colorspace
+  - r-corrplot
+  - r-data.table
+  - r-dplyr
+  - r-ggplot2
+  - r-lme4
+  - r-reshape2
+  - r-rmvp
+  - r-tidyr
+  - bioconductor-annotationdbi
+  - bioconductor-annotationhub
+  - bioconductor-chipseeker
+  - bioconductor-clusterprofiler
+  - bioconductor-genomicfeatures
+  - bioconductor-genomicranges
+  - bioconductor-rtracklayer
+  - bioconductor-txdbmaker

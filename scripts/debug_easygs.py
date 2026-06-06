@@ -1,0 +1,7 @@
+"""Debug launcher for EasyGS Typer commands."""
+
+from easygs.cli.commands import app
+
+
+if __name__ == "__main__":
+    app()

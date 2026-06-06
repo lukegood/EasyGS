@@ -1,0 +1,76 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.codex
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Frontend dependencies and build output
+node_modules/
+webui/node_modules/
+webui/.vite/
+webui/dist/
+webui/coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs and runtime state
+*.log
+*.pid
+*.sock
+botpy.log
+easygs-home/
+container/easygs-home/
+workspace/
+data/
+
+# Generated analysis outputs and local artifacts
+.assets/
+*.tmp
+*.bak
+*.swp
+*.swo
+*.db
+*.sqlite
+*.sqlite3
+
+# Large local tool/data artifacts
+softwares/
+easygs/skills/pfam_enrichment_analysis/scripts/all_maize_genes_proteins.fa.tsv
+easygs/skills/pfam_enrichment_analysis/scripts/all_maize_longest_cds.txt
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

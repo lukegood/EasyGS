@@ -1,0 +1,94 @@
+{
+  "app": {
+    "brand": "EasyGS",
+    "loading": {
+      "connecting": "Menghubungkan ke EasyGS…",
+      "boot": "Memuat EasyGS…"
+    },
+    "error": {
+      "title": "Tidak dapat menjangkau EasyGS",
+      "gatewayHint": "Pastikan gateway sedang berjalan (`easygs gateway`) dan halaman ini dibuka pada mesin yang sama."
+    },
+    "documentTitle": {
+      "base": "EasyGS",
+      "chat": "{{title}} · EasyGS"
+    },
+    "meta": {
+      "description": "UI web EasyGS — ngobrol dengan workspace EasyGS Anda."
+    }
+  },
+  "sidebar": {
+    "collapse": "Ciutkan sidebar",
+    "toggleTheme": "Ganti tema",
+    "newChat": "Obrolan baru",
+    "recent": "Terbaru",
+    "refreshSessions": "Segarkan sesi",
+    "language": {
+      "label": "Bahasa",
+      "ariaLabel": "Ganti bahasa"
+    }
+  },
+  "chat": {
+    "fallbackTitle": "Obrolan {{id}}",
+    "loading": "Memuat…",
+    "noSessions": "Belum ada sesi.",
+    "actions": "Aksi obrolan untuk {{title}}",
+    "delete": "Hapus",
+    "newChat": "Obrolan baru"
+  },
+  "deleteConfirm": {
+    "title": "Hapus “{{title}}”?",
+    "description": "File sesi akan dihapus dari disk. Tindakan ini tidak dapat dibatalkan.",
+    "cancel": "Batal",
+    "confirm": "Hapus"
+  },
+  "connection": {
+    "idle": "Idle",
+    "connecting": "Menghubungkan…",
+    "open": "Terhubung",
+    "reconnecting": "Menyambung ulang…",
+    "closed": "Terputus",
+    "error": "Kesalahan koneksi"
+  },
+  "thread": {
+    "loadingConversation": "Memuat percakapan…",
+    "empty": {
+      "description": "Ajukan pertanyaan, lanjutkan pekerjaan lokal, atau mulai thread baru."
+    },
+    "header": {
+      "toggleSidebar": "Tampilkan atau sembunyikan sidebar"
+    },
+    "composer": {
+      "placeholderThread": "Ketik pesan Anda…",
+      "placeholderHero": "Apa yang sedang Anda pikirkan?",
+      "placeholderOpening": "Membuka obrolan baru…",
+      "inputAria": "Input pesan",
+      "sendHint": "Enter untuk kirim · Shift+Enter untuk baris baru",
+      "send": "Kirim pesan"
+    },
+    "scrollToBottom": "Gulir ke bawah"
+  },
+  "message": {
+    "streaming": "sedang mengalir",
+    "assistantTyping": "Asisten sedang mengetik",
+    "toolSingle": "Menggunakan sebuah alat",
+    "toolMany": "Menggunakan {{count}} alat",
+    "progressSingle": "Informasi",
+    "progressMany": "{{count}} item informasi"
+  },
+  "code": {
+    "fallbackLanguage": "kode",
+    "copyAria": "Salin kode",
+    "copy": "Salin",
+    "copied": "Tersalin"
+  },
+  "common": {
+    "dismiss": "Tutup"
+  },
+  "errors": {
+    "messageTooBig": {
+      "title": "Pesan terlalu besar",
+      "body": "Server menolak pesan terakhir karena melebihi batas ukuran. Persingkat pesan, lalu coba kirim lagi."
+    }
+  }
+}

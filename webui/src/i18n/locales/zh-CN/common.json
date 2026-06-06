@@ -1,0 +1,98 @@
+{
+  "app": {
+    "brand": "EasyGS",
+    "loading": {
+      "connecting": "正在连接 EasyGS…",
+      "boot": "正在加载 EasyGS…"
+    },
+    "error": {
+      "title": "无法连接到 EasyGS",
+      "gatewayHint": "请确认 gateway 已启动（`easygs gateway`），并且当前页面与 gateway 运行在同一台机器上。"
+    },
+    "documentTitle": {
+      "base": "EasyGS",
+      "chat": "{{title}} · EasyGS"
+    },
+    "meta": {
+      "description": "EasyGS Web UI —— 与你的 EasyGS 工作区对话。"
+    }
+  },
+  "sidebar": {
+    "collapse": "收起侧边栏",
+    "toggleTheme": "切换主题",
+    "newChat": "新建对话",
+    "recent": "最近对话",
+    "refreshSessions": "刷新会话",
+    "language": {
+      "label": "语言",
+      "ariaLabel": "切换语言"
+    }
+  },
+  "chat": {
+    "fallbackTitle": "对话 {{id}}",
+    "loading": "加载中…",
+    "noSessions": "还没有会话。",
+    "actions": "“{{title}}” 的会话操作",
+    "delete": "删除",
+    "newChat": "新建对话"
+  },
+  "deleteConfirm": {
+    "title": "删除“{{title}}”？",
+    "description": "这个会话文件会从磁盘中删除，且无法撤销。",
+    "cancel": "取消",
+    "confirm": "删除"
+  },
+  "connection": {
+    "idle": "空闲",
+    "connecting": "连接中…",
+    "open": "已连接",
+    "reconnecting": "重连中…",
+    "closed": "已断开",
+    "error": "连接出错"
+  },
+  "thread": {
+    "loadingConversation": "正在加载对话…",
+    "processing": "EasyGS 正在处理…",
+    "empty": {
+      "description": "欢迎使用EasyGS！请在对话框中输入你想要分析的内容。"
+    },
+    "header": {
+      "toggleSidebar": "切换侧边栏"
+    },
+    "composer": {
+      "placeholderThread": "输入消息…",
+      "placeholderHero": "你在想什么？",
+      "placeholderOpening": "正在打开新对话…",
+      "inputAria": "消息输入框",
+      "sendHint": "Enter 发送 · Shift+Enter 换行",
+      "send": "发送消息"
+    },
+    "scrollToBottom": "滚动到底部"
+  },
+  "message": {
+    "streaming": "流式输出中",
+    "assistantTyping": "助手正在输入",
+    "toolSingle": "正在使用工具",
+    "toolMany": "已使用 {{count}} 个工具",
+    "progressSingle": "信息",
+    "progressMany": "{{count}} 条信息",
+    "source": {
+      "workflow": "Workflow"
+    }
+  },
+  "code": {
+    "fallbackLanguage": "代码",
+    "copyAria": "复制代码",
+    "copy": "复制",
+    "copied": "已复制"
+  },
+  "common": {
+    "dismiss": "关闭"
+  },
+  "errors": {
+    "messageTooBig": {
+      "title": "消息过大",
+      "body": "服务器拒绝了上一条消息，因为它超过大小限制。请缩短消息内容后重试。"
+    }
+  }
+}

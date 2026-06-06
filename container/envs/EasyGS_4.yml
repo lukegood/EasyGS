@@ -1,0 +1,14 @@
+name: EasyGS_4
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - r-base
+  - r-data.table
+  - r-dplyr
+  - r-ggplot2
+  - r-lme4

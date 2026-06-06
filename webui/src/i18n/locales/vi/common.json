@@ -1,0 +1,94 @@
+{
+  "app": {
+    "brand": "EasyGS",
+    "loading": {
+      "connecting": "Đang kết nối tới EasyGS…",
+      "boot": "Đang tải EasyGS…"
+    },
+    "error": {
+      "title": "Không thể kết nối tới EasyGS",
+      "gatewayHint": "Hãy chắc chắn gateway đang chạy (`easygs gateway`) và trang này được mở trên cùng máy."
+    },
+    "documentTitle": {
+      "base": "EasyGS",
+      "chat": "{{title}} · EasyGS"
+    },
+    "meta": {
+      "description": "Giao diện web EasyGS — trò chuyện với workspace EasyGS của bạn."
+    }
+  },
+  "sidebar": {
+    "collapse": "Thu gọn thanh bên",
+    "toggleTheme": "Chuyển giao diện",
+    "newChat": "Cuộc trò chuyện mới",
+    "recent": "Gần đây",
+    "refreshSessions": "Làm mới phiên",
+    "language": {
+      "label": "Ngôn ngữ",
+      "ariaLabel": "Đổi ngôn ngữ"
+    }
+  },
+  "chat": {
+    "fallbackTitle": "Trò chuyện {{id}}",
+    "loading": "Đang tải…",
+    "noSessions": "Chưa có phiên nào.",
+    "actions": "Tác vụ cho cuộc trò chuyện {{title}}",
+    "delete": "Xóa",
+    "newChat": "Cuộc trò chuyện mới"
+  },
+  "deleteConfirm": {
+    "title": "Xóa “{{title}}”?",
+    "description": "Tệp phiên sẽ bị xóa khỏi đĩa. Không thể hoàn tác thao tác này.",
+    "cancel": "Hủy",
+    "confirm": "Xóa"
+  },
+  "connection": {
+    "idle": "Rảnh",
+    "connecting": "Đang kết nối…",
+    "open": "Đã kết nối",
+    "reconnecting": "Đang kết nối lại…",
+    "closed": "Đã ngắt kết nối",
+    "error": "Lỗi kết nối"
+  },
+  "thread": {
+    "loadingConversation": "Đang tải cuộc trò chuyện…",
+    "empty": {
+      "description": "Hãy đặt câu hỏi, tiếp tục công việc cục bộ hoặc bắt đầu một luồng mới."
+    },
+    "header": {
+      "toggleSidebar": "Bật/tắt thanh bên"
+    },
+    "composer": {
+      "placeholderThread": "Nhập tin nhắn…",
+      "placeholderHero": "Bạn đang nghĩ gì?",
+      "placeholderOpening": "Đang mở cuộc trò chuyện mới…",
+      "inputAria": "Ô nhập tin nhắn",
+      "sendHint": "Enter để gửi · Shift+Enter để xuống dòng",
+      "send": "Gửi tin nhắn"
+    },
+    "scrollToBottom": "Cuộn xuống cuối"
+  },
+  "message": {
+    "streaming": "đang truyền",
+    "assistantTyping": "Trợ lý đang nhập",
+    "toolSingle": "Đang dùng một công cụ",
+    "toolMany": "Đã dùng {{count}} công cụ",
+    "progressSingle": "Thông tin",
+    "progressMany": "{{count}} mục thông tin"
+  },
+  "code": {
+    "fallbackLanguage": "mã",
+    "copyAria": "Sao chép mã",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép"
+  },
+  "common": {
+    "dismiss": "Đóng"
+  },
+  "errors": {
+    "messageTooBig": {
+      "title": "Tin nhắn quá lớn",
+      "body": "Máy chủ đã từ chối tin nhắn vừa rồi vì vượt quá giới hạn kích thước. Hãy rút ngắn tin nhắn rồi gửi lại."
+    }
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "app": {
+    "brand": "EasyGS",
+    "loading": {
+      "connecting": "Connecting to EasyGS…",
+      "boot": "Loading EasyGS…"
+    },
+    "error": {
+      "title": "Couldn't reach EasyGS",
+      "gatewayHint": "Make sure the gateway is running (`easygs gateway`) and that this page is open on the same machine."
+    },
+    "documentTitle": {
+      "base": "EasyGS",
+      "chat": "{{title}} · EasyGS"
+    },
+    "meta": {
+      "description": "EasyGS web UI — chat with your EasyGS workspace."
+    }
+  },
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "toggleTheme": "Toggle theme",
+    "newChat": "New chat",
+    "recent": "Recent",
+    "refreshSessions": "Refresh sessions",
+    "language": {
+      "label": "Language",
+      "ariaLabel": "Change language"
+    }
+  },
+  "chat": {
+    "fallbackTitle": "Chat {{id}}",
+    "loading": "Loading…",
+    "noSessions": "No sessions yet.",
+    "actions": "Chat actions for {{title}}",
+    "delete": "Delete",
+    "newChat": "New chat"
+  },
+  "deleteConfirm": {
+    "title": "Delete “{{title}}”?",
+    "description": "The session file will be removed from disk. This cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "connection": {
+    "idle": "Idle",
+    "connecting": "Connecting…",
+    "open": "Connected",
+    "reconnecting": "Reconnecting…",
+    "closed": "Disconnected",
+    "error": "Connection error"
+  },
+  "thread": {
+    "loadingConversation": "Loading conversation…",
+    "processing": "EasyGS is processing…",
+    "empty": {
+      "description": "Welcome to EasyGS! Enter what you would like to analyze in the chat box."
+    },
+    "header": {
+      "toggleSidebar": "Toggle sidebar"
+    },
+    "composer": {
+      "placeholderThread": "Type your message…",
+      "placeholderHero": "What's on your mind?",
+      "placeholderOpening": "Opening a new chat…",
+      "inputAria": "Message input",
+      "sendHint": "Enter to send · Shift+Enter for newline",
+      "send": "Send message"
+    },
+    "scrollToBottom": "Scroll to bottom"
+  },
+  "message": {
+    "streaming": "streaming",
+    "assistantTyping": "Assistant is typing",
+    "toolSingle": "Using a tool",
+    "toolMany": "Used {{count}} tools",
+    "progressSingle": "Information",
+    "progressMany": "{{count}} information items",
+    "source": {
+      "workflow": "Workflow"
+    }
+  },
+  "code": {
+    "fallbackLanguage": "code",
+    "copyAria": "Copy code",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "common": {
+    "dismiss": "Dismiss"
+  },
+  "errors": {
+    "messageTooBig": {
+      "title": "Message too large",
+      "body": "The server rejected your last message because it exceeded the size limit. Shorten the message and try again."
+    }
+  }
+}

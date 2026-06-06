@@ -1,0 +1,30 @@
+name: EasyGS_2
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - statsmodels
+  - scikit-learn
+  - bcftools
+  - bedtools
+  - vcftools
+  - plink
+  - gcta
+  - admixture
+  - poplddecay
+  - openjdk
+  - htslib
+  - tabix
+  - r-base
+  - r-data.table
+  - r-dplyr
+  - r-ggplot2
+  - r-lme4
+  - r-openxlsx
+  - r-rcpp
+  - r-rcpparmadillo

@@ -1,0 +1,13 @@
+=== 位点结构注释 ===
+GFF3: /home/wlg/easyGP/pubdata/Zea_mays.B73_RefGen_v4.43_modify.gff3
+BED: /home/wlg/.easygs/workflows/runs/wf_8cc3b411/steps/001_vcf_to_bed_fixed/new_fixed.bed
+TSS region: -2000bp to +500bp
+Annotation TSV: /home/wlg/running/codes/easygs/new.peakanno.tsv
+Annotation PNG: /home/wlg/running/codes/easygs/new.peakanno.png
+Annotated rows: 14
+PNG exists: yes
+Top annotation classes:
+- Distal Intergenic: 11
+- Promoter (<=1kb): 1
+- Intron (Zm00001d016581_T001/Zm00001d016581, intron 46 of 47): 1
+- Promoter (1-2kb): 1

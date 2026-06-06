@@ -1,0 +1,94 @@
+{
+  "app": {
+    "brand": "EasyGS",
+    "loading": {
+      "connecting": "EasyGS に接続中…",
+      "boot": "EasyGS を読み込み中…"
+    },
+    "error": {
+      "title": "EasyGS に接続できませんでした",
+      "gatewayHint": "gateway（`easygs gateway`）が起動しており、このページが同じマシン上で開かれていることを確認してください。"
+    },
+    "documentTitle": {
+      "base": "EasyGS",
+      "chat": "{{title}} · EasyGS"
+    },
+    "meta": {
+      "description": "EasyGS Web UI — EasyGS ワークスペースと会話します。"
+    }
+  },
+  "sidebar": {
+    "collapse": "サイドバーを閉じる",
+    "toggleTheme": "テーマを切り替える",
+    "newChat": "新しいチャット",
+    "recent": "最近のチャット",
+    "refreshSessions": "セッションを更新",
+    "language": {
+      "label": "言語",
+      "ariaLabel": "言語を変更"
+    }
+  },
+  "chat": {
+    "fallbackTitle": "チャット {{id}}",
+    "loading": "読み込み中…",
+    "noSessions": "まだセッションがありません。",
+    "actions": "「{{title}}」のチャット操作",
+    "delete": "削除",
+    "newChat": "新しいチャット"
+  },
+  "deleteConfirm": {
+    "title": "「{{title}}」を削除しますか？",
+    "description": "セッションファイルはディスクから削除されます。この操作は元に戻せません。",
+    "cancel": "キャンセル",
+    "confirm": "削除"
+  },
+  "connection": {
+    "idle": "待機中",
+    "connecting": "接続中…",
+    "open": "接続済み",
+    "reconnecting": "再接続中…",
+    "closed": "切断済み",
+    "error": "接続エラー"
+  },
+  "thread": {
+    "loadingConversation": "会話を読み込み中…",
+    "empty": {
+      "description": "質問したり、ローカル作業を続けたり、新しいスレッドを始めたりできます。"
+    },
+    "header": {
+      "toggleSidebar": "サイドバーを切り替える"
+    },
+    "composer": {
+      "placeholderThread": "メッセージを入力…",
+      "placeholderHero": "何を考えていますか？",
+      "placeholderOpening": "新しいチャットを開いています…",
+      "inputAria": "メッセージ入力欄",
+      "sendHint": "Enter で送信 · Shift+Enter で改行",
+      "send": "メッセージを送信"
+    },
+    "scrollToBottom": "一番下へスクロール"
+  },
+  "message": {
+    "streaming": "生成中",
+    "assistantTyping": "アシスタントが入力中",
+    "toolSingle": "ツールを使用中",
+    "toolMany": "{{count}} 個のツールを使用",
+    "progressSingle": "情報",
+    "progressMany": "{{count}} 件の情報"
+  },
+  "code": {
+    "fallbackLanguage": "コード",
+    "copyAria": "コードをコピー",
+    "copy": "コピー",
+    "copied": "コピーしました"
+  },
+  "common": {
+    "dismiss": "閉じる"
+  },
+  "errors": {
+    "messageTooBig": {
+      "title": "メッセージが大きすぎます",
+      "body": "前回のメッセージはサイズ制限を超えたため、サーバーに拒否されました。メッセージを短くして、もう一度送信してください。"
+    }
+  }
+}

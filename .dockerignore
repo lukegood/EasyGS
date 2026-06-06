@@ -1,0 +1,51 @@
+# VCS and local editor state
+.git/
+.vscode/
+.codex
+
+# Python caches and build outputs
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pkgbuild/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Local environments and package caches
+.venv/
+venv/
+node_modules/
+webui/node_modules/
+bridge/node_modules/
+bridge/dist/
+
+# Local secrets and runtime state
+.env
+.env.*
+.assets/
+easygs-home/
+data/
+workspace/
+container/.env
+container/.env.*
+container/easygs-home/
+container/data/
+
+# Files not needed by the image build
+docs/
+env_all/
+pics/
+scripts/
+tests/
+uv.lock
+
+# OS/editor noise
+.DS_Store
+*.log
