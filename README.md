@@ -28,51 +28,51 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 
 <table>
   <tr>
-    <td align="center" width="55%">
+    <td align="center" valign="top" width="55%">
       <h3>Web UI</h3>
       <p>Chat with EasyGS in your browser, simply and efficiently</p>
-      <img src="pics/WebUI.png" alt="EasyGS local Web UI" width="520">
+      <img src="pics/WebUI.png" alt="EasyGS local Web UI" height="260">
     </td>
-    <td align="center" width="45%">
+    <td align="center" valign="top" width="45%">
       <h3>Multiple Chat Integrations</h3>
       <p>Use EasyGS through Telegram, Feishu/Lark, and other messaging channels, including on mobile devices</p>
-      <img src="pics/feishuui.png" alt="EasyGS Feishu messaging interface" width="420">
+      <img src="pics/feishuui.png" alt="EasyGS Feishu messaging interface" height="260">
     </td>
   </tr>
 </table>
 
-## :earth_asia: Feature Preview
+## :tada: Feature Preview
 
 <table>
   <tr>
-    <td align="center" width="60%">
+    <td align="center" valign="top" width="60%">
       <h3>Real-Time Workflow Query</h3>
       <p>Check the status, progress, and results of background analysis tasks at any time</p>
-      <img src="pics/gzlxq.png" alt="EasyGS real-time workflow query" width="560">
+      <img src="pics/gzlxq.png" alt="EasyGS real-time workflow query" height="380">
     </td>
-    <td align="center" width="40%">
+    <td align="center" valign="top" width="40%">
       <h3>Fully Traceable Process</h3>
       <p>Keep analysis steps and intermediate results for easy workflow review</p>
-      <img src="pics/bzzz.png" alt="EasyGS fully traceable process" width="280">
+      <img src="pics/bzzz.png" alt="EasyGS fully traceable process" height="380">
     </td>
   </tr>
 </table>
 
 <div align="center">
   <h3>Diverse GS Analysis Tools</h3>
-  <p>Covering common workflows such as data QC/genomic prediction, GWAS, environmental interaction, correlation analysis, functional annotation, and more...</p>
+  <p>Covering common workflows such as data QC, genomic prediction, GWAS, environmental interaction, correlation analysis, functional annotation, and more...</p>
   <table>
     <tr>
-      <td align="center" width="50%">
-        <img src="pics/gwas.jpg" alt="EasyGS GS analysis result example" width="430">
+      <td align="center" valign="top" width="50%">
+        <img src="pics/gwas.jpg" alt="EasyGS GS analysis result example" height="400">
       </td>
-      <td align="center" width="50%">
-        <img src="pics/bxxgx.png" alt="EasyGS GS analysis result example" width="430">
+      <td align="center" valign="top" width="50%">
+        <img src="pics/bxxgx.png" alt="EasyGS GS analysis result example" height="400">
       </td>
     </tr>
   </table>
 </div>
-More tools are waiting for you to explore...
+**More tools are waiting for you to explore...**
 
 ## :raising_hand: Installation
 
@@ -386,7 +386,7 @@ For example, protein function annotation and PFAM enrichment require:
 
 If files are missing, EasyGS will report the exact missing paths at runtime.
 
-## Messaging Channels
+## :telephone_receiver: Messaging Channels
 
 EasyGS supports the command line, local Web UI, and multiple messaging channels. After enabling a channel, use `easygs gateway` to start the service.
 
@@ -403,10 +403,10 @@ EasyGS supports the command line, local Web UI, and multiple messaging channels.
 | WhatsApp | `channels.whatsapp` |
 | Mochat | `channels.mochat` |
 
-## License
+## :loudspeaker: License
 
 EasyGS is released under the MIT License.
 
-## Acknowledgement
+## :gift_heart: Acknowledgement
 
 This project references the [nanobot](https://github.com/HKUDS/nanobot) open-source project from [HKUDS](https://github.com/HKUDS). We thank the original authors for their open-source contribution.
