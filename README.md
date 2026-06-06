@@ -90,16 +90,21 @@ The easiest way to use EasyGS is to install it locally.
 
 ### 2. Install EasyGS
 
-Download the wheel package for the corresponding version from the release page, for example:
-
-```text
-easygs-0.1.3-py3-none-any.whl
-```
-
-Then install it locally:
+Install the latest released wheel directly from GitHub:
 
 ```bash
-pip install /path/to/easygs-0.1.3-py3-none-any.whl
+pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.4/easygs-0.1.4-py3-none-any.whl
+```
+
+You can also open the release page and download the wheel manually:
+
+- Latest release: <https://github.com/lukegood/EasyGS/releases/latest>
+- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.4/easygs-0.1.4-py3-none-any.whl>
+
+After downloading the file, install it with:
+
+```bash
+pip install /path/to/easygs-0.1.4-py3-none-any.whl
 ```
 
 Confirm that the installation succeeded:
@@ -110,7 +115,12 @@ easygs --version
 
 ### 3. Install Analysis Dependencies
 
-EasyGS analysis tools depend on several conda environments. Download the `env_all/` environment-file directory provided with the release package, or use the `env_all/` directory from the source tree, then create the environments:
+EasyGS analysis tools depend on several conda environments. Download the source code from the release page, or clone the repository, then use the `env_all/` directory to create the environments:
+
+```bash
+git clone https://github.com/lukegood/EasyGS.git
+cd EasyGS
+```
 
 ```bash
 conda env create -f env_all/EasyGS_1.yml
