@@ -77,7 +77,7 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 
 ## :raising_hand: Installation
 
-> [!警告]
+> [!WARNING]
 > EasyGS is an AI Agent that can execute analysis tasks and may create, modify, or delete files. Use it in a test or dedicated working directory, and back up important data in advance. Direct production use is not recommended.
 
 The easiest way to use EasyGS is to install it locally.
