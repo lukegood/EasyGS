@@ -1,9 +1,9 @@
 <div align="center">
   <img src="easygs_logo_withname.png" alt="EasyGS" width="500">
   <h1>EasyGS: An Easy-to-Use AI Agent for Natural Language-Driven Crop Genomic Selection Analysis</h1>
-  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/lukegood/EasyGS">
-  <img alt="GitHub forks" src="https://img.shields.io/github/forks/lukegood/EasyGS">
-  <img alt="GitHub License" src="https://img.shields.io/github/license/lukegood/EasyGS">
+  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/lukegood/">
+  <img alt="GitHub forks" src="https://img.shields.io/github/forks/lukegood/">
+  <img alt="GitHub License" src="https://img.shields.io/github/license/lukegood/">
   <p>
     <a href="README.md">
       <img src="https://img.shields.io/badge/English-1f6feb?style=for-the-badge" alt="English">
