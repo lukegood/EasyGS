@@ -443,7 +443,9 @@ def gateway(
             provider=provider,
             workspace=config.workspace_path,
             model=config.agents.defaults.model,
+            max_tokens=config.agents.defaults.max_tokens,
             temperature=config.agents.defaults.temperature,
+            reasoning_effort=config.agents.defaults.reasoning_effort,
             max_iterations=config.agents.defaults.max_tool_iterations,
             memory_window=config.agents.defaults.memory_window,
             brave_api_key=config.tools.web.search.api_key or None,
@@ -562,8 +564,10 @@ def agent(
         provider=provider,  # 大模型提供调用
         workspace=config.workspace_path,  # 工作空间
         model=config.agents.defaults.model,  # 模型名
+        max_tokens=config.agents.defaults.max_tokens,
         max_iterations=config.agents.defaults.max_tool_iterations,
         temperature=config.agents.defaults.temperature,
+        reasoning_effort=config.agents.defaults.reasoning_effort,
         memory_window=config.agents.defaults.memory_window,
         brave_api_key=config.tools.web.search.api_key or None,
         exec_config=config.tools.exec,
