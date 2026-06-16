@@ -39,6 +39,8 @@ class SubagentManager:  # 用于管理子代理
         workspace: Path,
         bus: MessageBus,
         model: str | None = None,
+        max_tokens: int = 4096,
+        reasoning_effort: str | None = None,
         brave_api_key: str | None = None,
         exec_config: "ExecToolConfig | None" = None,
         restrict_to_workspace: bool = False,
@@ -49,6 +51,8 @@ class SubagentManager:  # 用于管理子代理
         self.workspace = workspace
         self.bus = bus
         self.model = model or provider.get_default_model()
+        self.max_tokens = max_tokens
+        self.reasoning_effort = reasoning_effort
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
         self.restrict_to_workspace = restrict_to_workspace
@@ -141,6 +145,8 @@ class SubagentManager:  # 用于管理子代理
                     messages=messages,
                     tools=tools.get_definitions(),
                     model=self.model,
+                    max_tokens=self.max_tokens,
+                    reasoning_effort=self.reasoning_effort,
                 )
                 
                 if response.has_tool_calls:

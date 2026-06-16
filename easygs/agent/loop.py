@@ -68,7 +68,9 @@ class AgentLoop:
         workspace: Path,
         model: str | None = None,
         max_iterations: int = 40,  # wlg：防止无限循环
+        max_tokens: int = 4096,
         temperature: float = 0.7,  # wlg：LLM的温度参数
+        reasoning_effort: str | None = None,
         memory_window: int = 50,  # wlg：内存窗口大小（会话保留的消息数）
         brave_api_key: str | None = None,  # Brave搜索API密钥
         exec_config: "ExecToolConfig | None" = None,  # Shell执行配置
@@ -85,7 +87,9 @@ class AgentLoop:
         self.workspace = workspace
         self.model = model or provider.get_default_model()
         self.max_iterations = max_iterations  # 最大工具调用轮次（默认40）
+        self.max_tokens = max_tokens
         self.temperature = temperature
+        self.reasoning_effort = reasoning_effort
         self.memory_window = memory_window
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
@@ -108,7 +112,9 @@ class AgentLoop:
             provider=self.provider,
             tool_registry_factory=self._build_workflow_tool_registry,
             model=self.model,
+            max_tokens=self.max_tokens,
             temperature=0.2,
+            reasoning_effort=self.reasoning_effort,
             max_iterations=self.max_iterations,
             default_completion_notify_to=(
                 self.smtp_notifier.default_recipient if self.smtp_notifier else None
@@ -120,6 +126,8 @@ class AgentLoop:
             workspace=workspace,
             bus=bus,
             model=self.model,
+            max_tokens=self.max_tokens,
+            reasoning_effort=self.reasoning_effort,
             brave_api_key=brave_api_key,
             exec_config=self.exec_config,
             restrict_to_workspace=restrict_to_workspace,
@@ -323,7 +331,9 @@ class AgentLoop:
             messages=retry_messages,
             tools=submit_tool_defs,
             model=self.model,
+            max_tokens=self.max_tokens,
             temperature=self.temperature,
+            reasoning_effort=self.reasoning_effort,
         )
         if not response.has_tool_calls:
             return None, {}, []
@@ -412,7 +422,9 @@ class AgentLoop:
                 messages=messages,  # 组装好的消息
                 tools=self.tools.get_definitions(),  # 所有工具的OpenAI格式的描述
                 model=self.model,  # 模型名称
-                temperature=self.temperature
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                reasoning_effort=self.reasoning_effort,
             )
             
             # Handle tool calls
@@ -541,7 +553,9 @@ class AgentLoop:
                     {"role": "user", "content": msg.content},
                 ],
                 model=self.model,
+                max_tokens=self.max_tokens,
                 temperature=0.2,
+                reasoning_effort=self.reasoning_effort,
             )
             final_content = (response.content or "Background task updated.").strip()
             session.add_message("user", f"[System: {msg.sender_id}] {msg.content}")
@@ -581,7 +595,9 @@ class AgentLoop:
                 messages=messages,
                 tools=self.tools.get_definitions(),
                 model=self.model,
-                temperature=self.temperature
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                reasoning_effort=self.reasoning_effort,
             )
             
             if response.has_tool_calls:  # 如果有工具调用，则调用工具，并在message中增加下一步指示请求
@@ -716,6 +732,8 @@ Respond with ONLY valid JSON, no markdown fences."""
                     {"role": "user", "content": prompt},
                 ],
                 model=self.model,
+                max_tokens=self.max_tokens,
+                reasoning_effort=self.reasoning_effort,
             )
             text = (response.content or "").strip()  # 获取回复并且去空白
             if text.startswith("```"):  # 处理markdown块的包裹

@@ -94,6 +94,8 @@ class WorkflowService:
         tool_registry_factory: Callable[[WorkflowRecord], "ToolRegistry"] | None = None,
         model: str | None = None,
         temperature: float = 0.2,
+        max_tokens: int = 4096,
+        reasoning_effort: str | None = None,
         max_iterations: int = 40,
         mark_interrupted: bool = True,
         default_completion_notify_to: str | None = None,
@@ -108,6 +110,8 @@ class WorkflowService:
         self.tool_registry_factory = tool_registry_factory
         self.model = model
         self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.reasoning_effort = reasoning_effort
         self.max_iterations = max_iterations
         self._default_completion_notify_to = (default_completion_notify_to or "").strip().lower()
         self.smtp_notifier = smtp_notifier
@@ -1139,7 +1143,9 @@ class WorkflowService:
                     messages=messages,
                     tools=registry.get_definitions(),
                     model=self.model,
+                    max_tokens=self.max_tokens,
                     temperature=self.temperature,
+                    reasoning_effort=self.reasoning_effort,
                 )
 
                 if response.has_tool_calls:

@@ -173,7 +173,7 @@ nano ~/.easygs/config.json
 
 在刚才选择的 provider 下填写 `apiKey` 和 `apiBase`。`apiKey` 是服务商密钥，`apiBase` 是服务商或网关提供的 API 地址。
 
-例如使用 DeepSeek：
+推荐使用 DeepSeek：
 
 ```json
 {
@@ -212,17 +212,21 @@ provider 配好后，再设置 `agents.defaults.model`。模型名称要和 prov
 | `providers.dashscope` | `qwen-3.6-plus` |
 | `providers.custom` | 你的自定义服务支持的模型名 |
 
-例如 DeepSeek：
+例如使用DeepSeek V4 Pro时，推荐同时设置模型、生成上限和推理强度：
 
 ```json
 {
   "agents": {
     "defaults": {
-      "model": "deepseek-v4-pro"
+      "model": "deepseek-v4-pro",
+      "maxTokens": 384000,
+      "reasoningEffort": "max"
     }
   }
 }
 ```
+
+其中`maxTokens`用于控制单次回复的最大生成长度，`reasoningEffort`用于设置DeepSeek V4 Pro的推理强度。DeepSeek V4模型侧支持最高1M上下文，最大支持384000个token输出。EasyGS无contextWindow控制项，会将当前对话、工具结果和分析上下文交给所选模型处理。
 
 #### 5.4 保存并检查配置
 
@@ -234,9 +238,9 @@ easygs status
 
 如果状态中显示 provider 未配置，请检查：
 
-- 对应的 `providers.<name>.apiKey` 是否已填写。
-- 对应的 `providers.<name>.apiBase` 是否已填写为服务商或网关提供的完整 API 地址。
-- `agents.defaults.model` 是否写成了对应 provider 的模型名。
+- 对应的`providers.<name>.apiKey`是否已填写。
+- 对应的`providers.<name>.apiBase`是否已填写为服务商或网关提供的完整API地址。
+- `agents.defaults.model`是否写成了对应provider的模型名。
 
 ### 6. 启用 Web UI 并开始使用
 
@@ -317,14 +321,22 @@ cp .env.example .env
 mkdir -p ./easygs-home ./data
 ```
 
-编辑 `.env`，填写镜像、模型和 provider 凭证，然后启动：
+编辑`.env`，填写镜像、模型和provider凭证。使用DeepSeek V4 Pro时可参考：
+
+```dotenv
+EASYGS_MODEL=deepseek-v4-pro
+EASYGS_MAX_TOKENS=384000
+EASYGS_REASONING_EFFORT=max
+```
+
+然后启动：
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-请确认 `EASYGS_IMAGE`、`EASYGS_MODEL` 和所选 provider 的凭证已经配置。容器内请使用 `/data/...` 路径引用挂载的数据文件。更多说明见 [container/README_zh.md](container/README_zh.md)。
+请确认`EASYGS_IMAGE`、`EASYGS_MODEL`和所选provider的凭证已经配置。`EASYGS_MAX_TOKENS`和`EASYGS_REASONING_EFFORT`会映射到EasyGS默认Agent配置。容器内请使用`/data/...`路径引用挂载的数据文件。更多说明见[container/README_zh.md](container/README_zh.md)。
 
 ## :clap: 39种GS分析工具
 
