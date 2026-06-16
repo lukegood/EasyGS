@@ -213,17 +213,21 @@ After configuring the provider, set `agents.defaults.model`. The model name shou
 | `providers.dashscope` | `qwen-3.6-plus` |
 | `providers.custom` | A model name supported by your custom service |
 
-For example, when using DeepSeek:
+For example, when using DeepSeek V4 Pro, set the model, generation limit, and reasoning effort together:
 
 ```json
 {
   "agents": {
     "defaults": {
-      "model": "deepseek-v4-pro"
+      "model": "deepseek-v4-pro",
+      "maxTokens": 384000,
+      "reasoningEffort": "max"
     }
   }
 }
 ```
+
+`maxTokens` controls the maximum generation length for a single response, and `reasoningEffort` sets the reasoning intensity for DeepSeek V4 Pro. DeepSeek V4 models support up to 1M context and up to 384000 output tokens on the model side. EasyGS does not expose a `contextWindow` control; it passes the current conversation, tool results, and analysis context to the selected model.
 
 #### 5.4 Save and Check the Configuration
 
@@ -318,14 +322,22 @@ cp .env.example .env
 mkdir -p ./easygs-home ./data
 ```
 
-Edit `.env`, fill in the image, model, and provider credentials, then start:
+Edit `.env` and fill in the image, model, and provider credentials. When using DeepSeek V4 Pro, you can use:
+
+```dotenv
+EASYGS_MODEL=deepseek-v4-pro
+EASYGS_MAX_TOKENS=384000
+EASYGS_REASONING_EFFORT=max
+```
+
+Then start:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected provider are configured. Inside the container, use `/data/...` paths to refer to mounted data files. For more details, see [container/README.md](container/README.md).
+Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected provider are configured. `EASYGS_MAX_TOKENS` and `EASYGS_REASONING_EFFORT` map to the default EasyGS agent configuration. Inside the container, use `/data/...` paths to refer to mounted data files. For more details, see [container/README.md](container/README.md).
 
 ## :clap: 39 GS Analysis Tools
 
