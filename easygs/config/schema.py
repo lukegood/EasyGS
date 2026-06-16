@@ -203,6 +203,7 @@ class AgentDefaults(BaseModel):  # Agent默认配置
     workspace: str = "~/.easygs/workspace"
     model: str = "anthropic/claude-opus-4-5"
     max_tokens: int = 8192
+    reasoning_effort: str | None = None
     temperature: float = 0.7
     max_tool_iterations: int = 40
     memory_window: int = 50

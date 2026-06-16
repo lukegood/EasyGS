@@ -22,7 +22,7 @@ class _FakeProvider:
     def get_default_model(self):
         return "fake-model"
 
-    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7):
+    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7, reasoning_effort=None):
         self.calls += 1
         if self.calls == 1:
             return LLMResponse(
@@ -111,7 +111,7 @@ class _InboxProvider:
     def get_default_model(self):
         return "fake-model"
 
-    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7):
+    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7, reasoning_effort=None):
         self.calls += 1
         self.snapshots.append("\n".join(str(msg.get("content", "")) for msg in messages))
         if self.calls == 1:
@@ -135,7 +135,7 @@ class _SleepProvider:
     def get_default_model(self):
         return "fake-model"
 
-    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7):
+    async def chat(self, messages, tools=None, model=None, max_tokens=4096, temperature=0.7, reasoning_effort=None):
         self.calls += 1
         if self.calls == 1:
             return LLMResponse(
