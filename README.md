@@ -93,18 +93,18 @@ The easiest way to use EasyGS is to install it locally.
 Install the latest released wheel directly from GitHub:
 
 ```bash
-pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.4/easygs-0.1.4-py3-none-any.whl
+pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.5/easygs-0.1.5-py3-none-any.whl
 ```
 
 You can also open the release page and download the wheel manually:
 
 - Latest release: <https://github.com/lukegood/EasyGS/releases/latest>
-- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.4/easygs-0.1.4-py3-none-any.whl>
+- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.5/easygs-0.1.5-py3-none-any.whl>
 
 After downloading the file, install it with:
 
 ```bash
-pip install /path/to/easygs-0.1.4-py3-none-any.whl
+pip install /path/to/easygs-0.1.5-py3-none-any.whl
 ```
 
 Confirm that the installation succeeded:
