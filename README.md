@@ -31,7 +31,7 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
     <td align="center" valign="top" width="55%">
       <h3>Web UI</h3>
       <p>Chat with EasyGS in your browser, simply and efficiently</p>
-      <img src="pics/WebUI.png" alt="EasyGS local Web UI" height="260">
+      <img src="pics/EasyGS_UI.png" alt="EasyGS local Web UI" height="260">
     </td>
     <td align="center" valign="top" width="45%">
       <h3>Multiple Chat Integrations</h3>
