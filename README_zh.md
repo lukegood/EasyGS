@@ -404,11 +404,12 @@ docker compose up -d
 ~/.easygs/resources/
 ```
 
-例如蛋白功能注释和 PFAM 富集需要：
+例如蛋白功能注释、PFAM 富集和位点结构注释需要：
 
 ```text
 ~/.easygs/resources/pfam_enrichment_analysis/all_maize_longest_cds.txt
 ~/.easygs/resources/pfam_enrichment_analysis/all_maize_genes_proteins.fa.tsv
+~/.easygs/resources/peak_annotation_analysis/Zea_mays.B73_RefGen_v4.43_modify.gff3
 ```
 
 如果文件缺失，EasyGS 会在运行时提示具体缺失路径。

@@ -33,6 +33,7 @@ PFAM_RESOURCE_PATHS = [
     Path("easygs/skills/pfam_enrichment_analysis/scripts/all_maize_genes_proteins.fa.tsv"),
     Path("easygs/skills/pfam_enrichment_analysis/scripts/all_maize_longest_cds.txt"),
 ]
+PEAK_GFF3_FILENAME = "Zea_mays.B73_RefGen_v4.43_modify.gff3"
 
 
 class _ProbePlinkTool(PlinkToolBase):
@@ -427,6 +428,23 @@ def _write_test_resources(resources_root: Path) -> None:
     )
 
 
+def _write_peak_resource(resources_root: Path) -> Path:
+    resource_dir = resources_root / "peak_annotation_analysis"
+    resource_dir.mkdir(parents=True)
+    gff3_path = resource_dir / PEAK_GFF3_FILENAME
+    gff3_path.write_text(
+        "\n".join(
+            [
+                "##gff-version 3",
+                "1\ttest\tgene\t100\t200\t.\t+\t.\tID=Zm00001d000001",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return gff3_path
+
+
 @pytest.mark.asyncio
 async def test_pfam_tools_use_user_resource_root(monkeypatch, tmp_path) -> None:
     resources_root = tmp_path / "resources"
@@ -459,3 +477,32 @@ async def test_pfam_tools_use_user_resource_root(monkeypatch, tmp_path) -> None:
     assert str(expected_proteins) in pfam_run.command
     assert str(expected_longest) in protein_run.command
     assert str(expected_proteins) in protein_run.command
+
+
+@pytest.mark.asyncio
+async def test_peak_annotation_uses_user_resource_root(monkeypatch, tmp_path) -> None:
+    resources_root = tmp_path / "resources"
+    expected_gff3 = _write_peak_resource(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    bed = workspace / "locilist.bed"
+    bed.write_text(
+        "\n".join(
+            [
+                "1\t100\t101",
+                "1\t150\t151",
+                "1\t180\t181",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    tool = RunPeakAnnotationTool(workspace)
+    monkeypatch.setattr(tool, "_get_environment_status", _fake_environment_status)
+    prepared = await tool.prepare_run(bed=str(bed))
+
+    assert prepared.gff3_path == expected_gff3
+    assert str(expected_gff3) in prepared.command

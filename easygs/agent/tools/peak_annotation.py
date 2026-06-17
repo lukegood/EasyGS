@@ -9,7 +9,9 @@ from typing import Any
 from easygs.agent.tools.base import Tool
 from easygs.agent.tools.filesystem import _resolve_path
 from easygs.agent.tools.plink_common import PlinkToolBase
-_BUILTIN_MAIZE_GFF3 = Path("/home/wlg/easyGP/pubdata/Zea_mays.B73_RefGen_v4.43_modify.gff3").resolve()
+from easygs.resources import resolve_user_resource_path
+
+_MAIZE_GFF3_FILENAME = "Zea_mays.B73_RefGen_v4.43_modify.gff3"
 
 
 @dataclass
@@ -61,6 +63,10 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         self.script_path = self.skill_dir / "peak_annotation.sh"
         self.r_script_path = self.skill_dir / "run_peak_annotation.R"
         self.summary_script_path = self.skill_dir / "summarize_peak_annotation.py"
+        self.gff3_resource_path = resolve_user_resource_path(
+            "peak_annotation_analysis",
+            _MAIZE_GFF3_FILENAME,
+        )
 
     @property
     def name(self) -> str:
@@ -70,8 +76,8 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
     def description(self) -> str:
         return (
             "Run maize-only ChIPseeker-based locus structural annotation in EasyGS_1 using the "
-            "built-in Zea mays B73 RefGen v4.43 annotation and a BED file, then export annotation "
-            "TSV and annotation pie-chart PNG outputs."
+            "user-managed Zea mays B73 RefGen v4.43 GFF3 resource and a BED file, then export "
+            "annotation TSV and annotation pie-chart PNG outputs."
         )
 
     @property
@@ -82,9 +88,10 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
                 "gff3": {
                     "type": "string",
                     "description": (
-                        "Optional maize gene annotation path. Defaults to the built-in maize "
-                        f"annotation: {_BUILTIN_MAIZE_GFF3}. "
-                        "This tool is maize-only and does not accept non-maize annotations."
+                        "Optional explicit maize gene annotation path. Defaults to the "
+                        f"user-managed resource: {self.gff3_resource_path}. "
+                        "Usually leave this unset; set EASYGS_RESOURCES_DIR to use a different "
+                        "resource root."
                     ),
                 },
                 "bed": {
@@ -271,19 +278,19 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         if value and str(value).strip():
             path = Path(value).expanduser().resolve()
         else:
-            path = _BUILTIN_MAIZE_GFF3
+            path = self.gff3_resource_path
 
         if not path.exists():
-            raise ValueError(f"GFF annotation file not found: {path}")
+            raise ValueError(
+                "Missing required resource for peak_annotation_analysis:\n"
+                f"{path}\n\n"
+                f"Please download or prepare {_MAIZE_GFF3_FILENAME} and place it at the "
+                "path above. Set EASYGS_RESOURCES_DIR to use a different resource root."
+            )
         if not path.is_file():
             raise ValueError(f"GFF annotation input must be a file: {path}")
         if path.suffix.lower() not in {".gff3", ".gff", ".gtf"}:
             raise ValueError(f"GFF annotation input must end with .gff3, .gff, or .gtf: {path}")
-        if path != _BUILTIN_MAIZE_GFF3:
-            raise ValueError(
-                "Peak annotation is maize-only and only supports the built-in annotation: "
-                f"{_BUILTIN_MAIZE_GFF3}"
-            )
         return path
 
     def _resolve_bed_file(self, value: str) -> Path:

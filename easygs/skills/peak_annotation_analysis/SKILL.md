@@ -1,6 +1,6 @@
 ---
 name: peak_annotation_analysis
-description: Run maize-only ChIPseeker-based locus structural annotation from a BED file using the built-in Zea mays GFF3 annotation.
+description: Run maize-only ChIPseeker-based locus structural annotation from a BED file using the user-managed Zea mays GFF3 annotation resource.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
@@ -10,12 +10,14 @@ Run maize locus structural annotation using the built-in `peak_annotation_analys
 
 Species scope:
 - maize only (`Zea mays`)
-- built-in annotation path: `/home/wlg/easyGP/pubdata/Zea_mays.B73_RefGen_v4.43_modify.gff3`
+- default annotation resource:
+  `~/.easygs/resources/peak_annotation_analysis/Zea_mays.B73_RefGen_v4.43_modify.gff3`
+- if `EASYGS_RESOURCES_DIR` is set, the tool uses that directory as the resource root
 
 This should be treated as one complete workflow rather than separate user-facing steps, because the analysis depends on one tightly coupled chain:
 
-1. validate the built-in maize GFF3 annotation and the BED loci file
-2. build a `TxDb` object from the built-in GFF3 annotation
+1. validate the maize GFF3 annotation resource and the BED loci file
+2. build a `TxDb` object from the GFF3 annotation resource
 3. read the BED loci as peaks
 4. run `annotatePeak()` with the chosen TSS window
 5. export the annotation table and annotation pie chart
@@ -31,7 +33,7 @@ Use `peak_annotation_analysis(...)` for execution.
 
 The bundled pipeline:
 
-1. reads the built-in maize GFF3 gene annotation file (`/home/wlg/easyGP/pubdata/Zea_mays.B73_RefGen_v4.43_modify.gff3`)
+1. reads the maize GFF3 gene annotation resource from `~/.easygs/resources/peak_annotation_analysis/`
 2. builds a `TxDb` object with `txdbmaker::makeTxDbFromGFF()`
 3. reads the BED loci with `ChIPseeker::readPeakFile()`
 4. runs `ChIPseeker::annotatePeak()` with a TSS region
@@ -56,6 +58,7 @@ The bundled pipeline:
 - `output_prefix`: basename/path prefix for outputs. Default: BED stem, such as `locilist`
 - `tss_upstream`: upstream TSS annotation window in bp. Default: `2000`
 - `tss_downstream`: downstream TSS annotation window in bp. Default: `500`
+- `gff3`: explicit maize GFF3 path. Normally leave this unset and use the default resource path; set `EASYGS_RESOURCES_DIR` if the resource root is different.
 
 If the user wants any of these changed, ask them to provide the override explicitly instead of guessing.
 
@@ -88,7 +91,7 @@ Behavior rules:
 - When asking for required input files, always provide data examples with 3 to 4 sample rows together with the format description
 - If mentioning optional parameters, always tell the user the default values and remind them to provide overrides explicitly
 - The loci input must be `.bed`
-- Do not ask the user for an annotation file; this skill uses the built-in maize GFF3 annotation
+- Do not ask the user for an annotation file unless the default resource is missing
 - This skill is maize-only and does not support non-maize annotations
 - If the user does not mention an output location, it is acceptable to use the tool defaults
 - Do not invent file paths

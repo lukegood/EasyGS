@@ -405,11 +405,12 @@ Some features require large reference files that are not provided with EasyGS. T
 ~/.easygs/resources/
 ```
 
-For example, protein function annotation and PFAM enrichment require:
+For example, protein function annotation, PFAM enrichment, and peak annotation require:
 
 ```text
 ~/.easygs/resources/pfam_enrichment_analysis/all_maize_longest_cds.txt
 ~/.easygs/resources/pfam_enrichment_analysis/all_maize_genes_proteins.fa.tsv
+~/.easygs/resources/peak_annotation_analysis/Zea_mays.B73_RefGen_v4.43_modify.gff3
 ```
 
 If files are missing, EasyGS will report the exact missing paths at runtime.
