@@ -1,98 +1,113 @@
 ---
 name: ortholog_extraction_analysis
-description: Extract ortholog rows from a user-provided maize ortholog matrix TSV using a user-provided gene list TXT and export a matched .ortholog.tsv file.
+description: Extract maize, wheat, or rice ortholog rows by exact first-column gene matching using a species-specific EasyGS matrix resource.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
 # Ortholog Extraction Skill
 
-Run ortholog extraction using the built-in `ortholog_extraction_analysis` tool.
+Extract ortholog rows for maize, wheat, or rice using the built-in
+`ortholog_extraction_analysis` tool.
 
-This should be treated as one complete workflow rather than separate user-facing steps, because the analysis depends on one tightly coupled chain:
+Species resources:
 
-1. validate the user-provided gene list TXT
-2. validate the user-provided ortholog matrix TSV
-3. extract matching rows with `grep -f`
-4. export `<genelist_stem>.ortholog.tsv`
-5. write a compact summary
+- `maize`, the legacy default:
+  `~/.easygs/resources/ortholog_extraction_analysis/maize_ortholog_matrix.tsv`
+- `wheat`:
+  `~/.easygs/resources/ortholog_extraction_analysis/wheat_ortholog_matrix.tsv`
+- `rice`:
+  `~/.easygs/resources/ortholog_extraction_analysis/rice_ortholog_matrix.tsv`
+- if `EASYGS_RESOURCES_DIR` is set, the tool uses that directory as the resource root
 
-Do not split this into separate public tools for gene-list filtering and TSV extraction. Those stay internal inside one complete workflow.
+This is one complete workflow:
+
+1. validate the user gene-list TXT
+2. select and validate the source-species ortholog matrix resource
+3. ignore blank gene-list rows and deduplicate requested IDs for matching
+4. match each full gene ID exactly against the matrix's first column
+5. preserve matrix row order and all duplicate relationship rows
+6. export the matched TSV and a compact summary
+
+Do not split filtering and summarization into separate public tools.
 
 ## Tool-First Rule
 
 Use `ortholog_extraction_analysis(...)` for execution.
 
-## What the Tool Runs
+## Required Input
 
-The bundled pipeline:
-
-1. reads the user-provided `genelist.txt`
-2. reads the user-provided `maize_ortholog_matrix.tsv`
-3. runs fixed-string row extraction with `grep -F -f`
-4. writes `<genelist_stem>.ortholog.tsv`
-5. writes a compact summary text file
-
-## Required Inputs
-
-- `genelist_txt`: user-provided gene list TXT. Example:
+- `genelist_txt`: one source-species gene ID per line. Wheat example:
 
 ```text
-Zm00001d031939
-Zm00001d031940
-Zm00001d031941
-Zm00001d031942
+TraesCS6A03G0926000
+TraesCS3D03G0591600
+TraesCS3B03G0806700
+TraesCS1D03G0346300
 ```
 
-- `ortholog_matrix_tsv`: user-provided maize ortholog matrix TSV. Example:
+Rice example:
 
 ```text
-Maize	Arabidopsis	sorghum	Brachypodium	rice	setaria
-GRMZM5G800096	ATCG01050	ABK79546,SORBI_K036300	NA	NA	Si020851m.g
-GRMZM5G800101	NA	ABK79539	BRADI4G37052	OS04G0473025	NA
-GRMZM5G800457	NA	NA	NA	NA	Si020789m.g
+LOC_Os02g07880
+LOC_Os01g19750
+LOC_Os05g33910
+LOC_Os07g42632
 ```
 
 ## Optional Parameters
 
-- `output_dir`: root directory for outputs; when omitted, the runtime supplies the default for the current context
-- `output_filename`: output TSV filename. Default: `<genelist_stem>.ortholog.tsv`
+- `species`: `maize`, `wheat`, or `rice`; default: `maize`
+- `output_dir`: output directory; the runtime supplies a context default when omitted
+- `output_filename`: output TSV filename. By default a trailing `_genes` is removed, so
+  `100_wheat_genes.txt` becomes `100_wheat.ortholog.tsv`; other stems are preserved
 
-If the user wants any of these changed, ask them to provide the override explicitly instead of guessing.
+The ortholog matrix path is intentionally not public. The tool selects it from the resource
+directory and reports the exact required path when missing.
 
-Default output pattern:
+Outputs:
 
-- `<output_dir>/<genelist_stem>.ortholog.tsv`
-- `<output_dir>/<genelist_stem>.ortholog_summary.txt`
+- `<output_dir>/<derived-or-explicit-name>.ortholog.tsv`
+- `<output_dir>/<output-tsv-stem>_summary.txt`
+
+## Matching Semantics
+
+The extraction uses exact first-column equality rather than `grep -f` substring matching. This
+prevents blank patterns, prefix IDs, or IDs appearing only in a target-species column from
+matching unrelated rows. If the same source gene occurs on multiple matrix rows, every row is
+retained.
 
 ## Pre-Run Validation
 
-Before running analysis, remember that the tool itself always checks whether the required environment exists:
+The tool checks:
 
-- `EasyGS_2`
+- environment `EasyGS_2`
+- executable `python3`
+- non-empty gene list
+- selected matrix resource existence
+- tab-delimited matrix with at least two columns
+- first matrix header equals the selected species (`Maize`, `Wheat`, or `Rice`)
 
-Behavior rules:
-
-- The tool will stop automatically if the `EasyGS_2` environment is missing
-- The tool will stop automatically if `grep` or `python3` is not available inside `EasyGS_2`
-- All required local files must be explicitly supplied by the user
-- Do not invent file paths
-- Do not hide required local files inside the script
+Stop and report the exact error if validation fails.
 
 ## Parameter Collection Rules
 
-Before calling `ortholog_extraction_analysis(...)`, collect the required gene list TXT and ortholog matrix TSV unless they are already available in the conversation.
+Collect the gene-list path and species unless already available. Omitting species intentionally
+keeps the legacy maize default.
 
 Behavior rules:
 
-- When asking for required input files, always provide data examples with 3 to 4 sample rows together with the format description
-- If mentioning optional parameters, always tell the user the default values and remind them to provide overrides explicitly
-- All required files must be explicitly supplied by the user and must not be hidden in the script
+- When asking for a gene list, show three or four example rows
+- Never ask for or expose a matrix path as a normal parameter
+- Infer species only when unambiguous; otherwise ask whether the genes are maize, wheat, or rice
+- Use tool defaults when no output location is requested
+- Do not invent paths
 
 ## Result Interpretation
 
-After a successful run, the summary should highlight:
+After a successful run, report:
 
-- the generated ortholog TSV path
-- the requested gene count
-- the matched ortholog-row count
-- the matched maize-gene count when inferable
+- selected species and matrix resource
+- output TSV and summary paths
+- requested and unique requested gene counts
+- matched row and matched unique gene counts
+- missing gene count

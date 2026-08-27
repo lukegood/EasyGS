@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
-from contextlib import contextmanager
 import inspect
 import json
 import os
@@ -13,13 +11,16 @@ import signal
 import sqlite3
 import time
 import uuid
+from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator
 
 from loguru import logger
 
 from easygs.bus.events import OutboundMessage
 from easygs.bus.queue import MessageBus
+from easygs.providers.base import normalize_token_usage
 from easygs.workflows.schema import (
     WorkflowActionRecord,
     WorkflowArtifactRecord,
@@ -165,6 +166,11 @@ class WorkflowService:
         plan_summary: str | None = None,
         planned_steps: list[str] | None = None,
         expected_outputs: list[str] | None = None,
+        task_started_at_ms: int | None = None,
+        initial_input_tokens: int = 0,
+        initial_output_tokens: int = 0,
+        initial_llm_call_count: int = 0,
+        initial_usage_reported_call_count: int = 0,
     ) -> WorkflowRecord:
         request_text = str(request or "").strip()
         if not request_text:
@@ -202,6 +208,11 @@ class WorkflowService:
             work_dir=str(work_dir),
             created_at_ms=now,
             updated_at_ms=now,
+            task_started_at_ms=task_started_at_ms or now,
+            input_tokens=max(0, int(initial_input_tokens)),
+            output_tokens=max(0, int(initial_output_tokens)),
+            llm_call_count=max(0, int(initial_llm_call_count)),
+            usage_reported_call_count=max(0, int(initial_usage_reported_call_count)),
         )
         self._write_state(record)
         self._insert_workflow(record)
@@ -314,6 +325,9 @@ class WorkflowService:
             reason=message,
             grace_seconds=self.process_termination_grace_seconds,
         )
+        cancelled = self.get_workflow(workflow.id)
+        if cancelled:
+            self._write_metrics(cancelled)
         return f"Workflow `{workflow.id}` cancelled."
 
     def drain_user_messages(self, workflow_id: str) -> list[dict[str, Any]]:
@@ -360,6 +374,8 @@ class WorkflowService:
             f"- Iterations: {workflow.iteration_count}",
             f"- Work dir: {workflow.work_dir}",
             "",
+            *self._resource_usage_lines(workflow),
+            "",
             "Actions",
         ]
         actions = self.get_actions(workflow.id)
@@ -388,6 +404,8 @@ class WorkflowService:
             f"Workflow `{workflow.id}` finished with status `{workflow.status}`.",
             f"- Name: {workflow.name}",
             f"- Work dir: {workflow.work_dir}",
+            "",
+            *self._resource_usage_lines(workflow),
         ]
         if workflow.final_summary:
             lines.extend(["", "Final summary:", workflow.final_summary])
@@ -412,6 +430,64 @@ class WorkflowService:
                 if action.stderr_path:
                     lines.append(f"  - Stderr: {action.stderr_path}")
         return "\n".join(lines)
+
+    def _resource_usage_lines(self, workflow: WorkflowRecord) -> list[str]:
+        runtime_ms = workflow.runtime_ms(_now_ms())
+        runtime = "n/a" if runtime_ms is None else f"{runtime_ms / 1000:.3f} seconds"
+        if workflow.llm_call_count == 0:
+            input_text = output_text = total_text = "n/a"
+        else:
+            suffix = "" if workflow.usage_complete else " (partial)"
+            input_text = f"{workflow.input_tokens:,}{suffix}"
+            output_text = f"{workflow.output_tokens:,}{suffix}"
+            total_text = f"{workflow.total_tokens:,}{suffix}"
+        return [
+            "Resource usage",
+            f"- Input tokens: {input_text}",
+            f"- Output tokens: {output_text}",
+            f"- Total tokens: {total_text}",
+            f"- Runtime: {runtime}",
+        ]
+
+    def _record_llm_usage(self, workflow_id: str, usage: dict[str, Any] | None) -> None:
+        normalized = normalize_token_usage(usage)
+        input_tokens, output_tokens = normalized or (0, 0)
+        reported_increment = 1 if normalized is not None else 0
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE workflows
+                SET input_tokens = input_tokens + ?,
+                    output_tokens = output_tokens + ?,
+                    llm_call_count = llm_call_count + 1,
+                    usage_reported_call_count = usage_reported_call_count + ?
+                WHERE id = ?
+                """,
+                (input_tokens, output_tokens, reported_increment, workflow_id),
+            )
+
+    def _write_metrics(self, workflow: WorkflowRecord) -> None:
+        """Write the terminal, machine-readable metrics record for one workflow."""
+        runtime_ms = workflow.runtime_ms()
+        payload = {
+            "workflow_id": workflow.id,
+            "status": workflow.status,
+            "task_started_at_ms": workflow.task_started_at_ms,
+            "completed_at_ms": workflow.completed_at_ms,
+            "input_tokens": workflow.input_tokens,
+            "output_tokens": workflow.output_tokens,
+            "total_tokens": workflow.total_tokens,
+            "runtime_seconds": None if runtime_ms is None else round(runtime_ms / 1000, 3),
+            "usage_complete": workflow.usage_complete,
+            "llm_call_count": workflow.llm_call_count,
+            "usage_reported_call_count": workflow.usage_reported_call_count,
+        }
+        work_dir = Path(workflow.work_dir)
+        work_dir.mkdir(parents=True, exist_ok=True)
+        (work_dir / "run_metrics.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     def format_listing(self, *, status: str = "all", limit: int = 20) -> str:
         workflows = self.list_workflows()
@@ -530,6 +606,16 @@ class WorkflowService:
             )
             self._ensure_column(conn, "workflows", "final_summary", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "workflows", "iteration_count", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "workflows", "task_started_at_ms", "INTEGER")
+            self._ensure_column(conn, "workflows", "input_tokens", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "workflows", "output_tokens", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "workflows", "llm_call_count", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(
+                conn,
+                "workflows",
+                "usage_reported_call_count",
+                "INTEGER NOT NULL DEFAULT 0",
+            )
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS workflow_actions (
@@ -628,8 +714,10 @@ class WorkflowService:
                     id, name, status, request, plan_json, origin_channel,
                     origin_chat_id, notify_on_completion, work_dir, current_step_id,
                     created_at_ms, updated_at_ms, started_at_ms, completed_at_ms,
-                    error, final_summary, iteration_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    error, final_summary, iteration_count, task_started_at_ms,
+                    input_tokens, output_tokens, llm_call_count,
+                    usage_reported_call_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 self._workflow_values(workflow),
             )
@@ -651,8 +739,28 @@ class WorkflowService:
                     AND status != ?
                   )
                 """,
-                self._workflow_values(workflow)[1:] + (workflow.id, workflow.status),
+                self._workflow_update_values(workflow) + (workflow.id, workflow.status),
             )
+
+    def _workflow_update_values(self, workflow: WorkflowRecord) -> tuple[Any, ...]:
+        return (
+            workflow.name,
+            workflow.status,
+            workflow.request,
+            json.dumps(workflow.state, ensure_ascii=False),
+            workflow.origin_channel,
+            workflow.origin_chat_id,
+            int(workflow.notify_on_completion),
+            workflow.work_dir,
+            workflow.current_action_id,
+            workflow.created_at_ms,
+            workflow.updated_at_ms,
+            workflow.started_at_ms,
+            workflow.completed_at_ms,
+            workflow.error,
+            workflow.final_summary,
+            workflow.iteration_count,
+        )
 
     def _workflow_values(self, workflow: WorkflowRecord) -> tuple[Any, ...]:
         return (
@@ -673,6 +781,11 @@ class WorkflowService:
             workflow.error,
             workflow.final_summary,
             workflow.iteration_count,
+            workflow.task_started_at_ms,
+            workflow.input_tokens,
+            workflow.output_tokens,
+            workflow.llm_call_count,
+            workflow.usage_reported_call_count,
         )
 
     def _row_to_workflow(self, row: sqlite3.Row | None) -> WorkflowRecord | None:
@@ -696,6 +809,11 @@ class WorkflowService:
             error=row["error"],
             final_summary=row["final_summary"],
             iteration_count=row["iteration_count"],
+            task_started_at_ms=row["task_started_at_ms"],
+            input_tokens=row["input_tokens"],
+            output_tokens=row["output_tokens"],
+            llm_call_count=row["llm_call_count"],
+            usage_reported_call_count=row["usage_reported_call_count"],
         )
 
     def _insert_action(self, action: WorkflowActionRecord) -> None:
@@ -1030,7 +1148,8 @@ class WorkflowService:
 
     def _mark_interrupted_workflows(self) -> None:
         now = _now_ms()
-        for workflow_id in self._running_workflow_ids():
+        interrupted_ids = self._running_workflow_ids()
+        for workflow_id in interrupted_ids:
             self._terminate_workflow_processes_sync(
                 workflow_id,
                 reason=_INTERRUPTED_ERROR,
@@ -1062,6 +1181,10 @@ class WorkflowService:
                     now,
                 ),
             )
+        for workflow_id in interrupted_ids:
+            workflow = self.get_workflow(workflow_id)
+            if workflow:
+                self._write_metrics(workflow)
 
     async def _run_worker(self) -> None:
         while self._running:
@@ -1119,6 +1242,8 @@ class WorkflowService:
             workflow.error = "Workflow service is not configured with an LLM provider and tools."
             workflow.completed_at_ms = _now_ms()
             self._update_workflow(workflow)
+            workflow = self.get_workflow(workflow.id) or workflow
+            self._write_metrics(workflow)
             await self._announce_completion(workflow)
             return
 
@@ -1147,6 +1272,11 @@ class WorkflowService:
                     temperature=self.temperature,
                     reasoning_effort=self.reasoning_effort,
                 )
+                self._record_llm_usage(workflow.id, response.usage)
+                if response.finish_reason == "error":
+                    raise RuntimeError(
+                        (response.content or "Error calling LLM.").strip()
+                    )
 
                 if response.has_tool_calls:
                     if self._workflow_cancelled(workflow.id):
@@ -1243,6 +1373,9 @@ class WorkflowService:
                 self._update_workflow(workflow)
                 logger.error("Workflow [{}] failed: {}", workflow.id, exc)
 
+        workflow = self.get_workflow(workflow.id) or workflow
+        if workflow.status in {"succeeded", "failed", "cancelled"}:
+            self._write_metrics(workflow)
         await self._announce_completion(workflow)
         logger.info("Workflow [{}] completed with status {}", workflow.id, workflow.status)
 
@@ -1621,12 +1754,15 @@ class WorkflowService:
                 lines.append(f"- {artifact.name}: {artifact.value}")
         if workflow.error:
             lines.extend(["", f"Error: {workflow.error}"])
+        resource_usage = "\n".join(self._resource_usage_lines(workflow))
+        lines.extend(["", resource_usage])
         metadata = {
             "_turn_complete": True,
             "workflow_id": workflow.id,
             "workflow_name": workflow.name,
             "workflow_status": workflow.status,
             "completion_notify_to": self._default_completion_notify_to,
+            "resource_usage": resource_usage,
         }
         content = "\n".join(lines)
         await self.bus.publish_outbound(

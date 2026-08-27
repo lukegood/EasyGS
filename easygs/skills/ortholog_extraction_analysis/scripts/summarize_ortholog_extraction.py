@@ -9,6 +9,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize ortholog extraction outputs.")
+    parser.add_argument("--species", required=True, choices=("maize", "wheat", "rice"))
     parser.add_argument("--genelist-txt", required=True)
     parser.add_argument("--ortholog-matrix-tsv", required=True)
     parser.add_argument("--output-tsv", required=True)
@@ -20,7 +21,7 @@ def _read_nonempty_lines(path: Path) -> list[str]:
     if not path.exists():
         return []
     return [
-        line.strip()
+        line.strip().lstrip("\ufeff")
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
         if line.strip()
     ]
@@ -35,26 +36,27 @@ def main() -> int:
 
     requested_genes = _read_nonempty_lines(genelist_path)
     matched_rows = _read_nonempty_lines(output_path)
-    matched_maize_genes = []
+    matched_genes = []
     for row in matched_rows:
         first_field = row.split("\t", 1)[0].strip()
-        if first_field and first_field != "Maize":
-            matched_maize_genes.append(first_field)
+        if first_field:
+            matched_genes.append(first_field)
 
     unique_requested = list(dict.fromkeys(requested_genes))
-    unique_matched = list(dict.fromkeys(matched_maize_genes))
+    unique_matched = list(dict.fromkeys(matched_genes))
     missing_count = max(len(unique_requested) - len(unique_matched), 0)
 
     lines = [
         "=== 同源基因提取 ===",
+        f"Species: {args.species}",
         f"Gene list TXT: {genelist_path}",
         f"Ortholog matrix TSV: {matrix_path}",
         f"Output TSV: {output_path}",
         f"Requested genes: {len(requested_genes)}",
         f"Unique requested genes: {len(unique_requested)}",
         f"Matched rows: {len(matched_rows)}",
-        f"Matched maize genes: {len(unique_matched)}",
-        f"Missing genes (by unique maize IDs): {missing_count}",
+        f"Matched genes: {len(unique_matched)}",
+        f"Missing genes: {missing_count}",
     ]
     if matched_rows:
         lines.append("First matched rows:")

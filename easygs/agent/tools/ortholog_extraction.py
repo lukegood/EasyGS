@@ -9,12 +9,21 @@ from typing import Any
 from easygs.agent.tools.base import Tool
 from easygs.agent.tools.filesystem import _resolve_path
 from easygs.agent.tools.plink_common import PlinkToolBase
+from easygs.resources import resolve_user_resource_path
+
+_SPECIES_MATRIX_FILENAMES = {
+    "maize": "maize_ortholog_matrix.tsv",
+    "wheat": "wheat_ortholog_matrix.tsv",
+    "rice": "rice_ortholog_matrix.tsv",
+}
+
 
 @dataclass
 class PreparedOrthologExtractionRun:
     """Prepared execution plan for ortholog extraction."""
 
     launcher: str
+    species: str
     command: list[str]
     genelist_txt_path: Path
     ortholog_matrix_tsv_path: Path
@@ -26,6 +35,7 @@ class PreparedOrthologExtractionRun:
     def to_metadata(self) -> dict[str, Any]:
         return {
             "launcher": self.launcher,
+            "species": self.species,
             "genelist_txt_path": str(self.genelist_txt_path),
             "ortholog_matrix_tsv_path": str(self.ortholog_matrix_tsv_path),
             "output_dir": str(self.output_dir),
@@ -35,9 +45,8 @@ class PreparedOrthologExtractionRun:
         }
 
 
-
 class RunOrthologExtractionTool(PlinkToolBase, Tool):
-    """Extract ortholog rows that match a user-provided gene list."""
+    """Extract species ortholog rows that exactly match a user-provided gene list."""
 
     def __init__(self, workspace: Path, restrict_to_workspace: bool = False, timeout: int = 3600):
         super().__init__(
@@ -49,7 +58,12 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
             env_name="EasyGS_2",
         )
         self.script_path = self.skill_dir / "ortholog_extraction.sh"
+        self.extraction_script_path = self.skill_dir / "extract_orthologs.py"
         self.summary_script_path = self.skill_dir / "summarize_ortholog_extraction.py"
+        self.matrix_resource_paths = {
+            species: resolve_user_resource_path("ortholog_extraction_analysis", filename)
+            for species, filename in _SPECIES_MATRIX_FILENAMES.items()
+        }
 
     @property
     def name(self) -> str:
@@ -58,8 +72,9 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
     @property
     def description(self) -> str:
         return (
-            "Extract ortholog rows in EasyGS_2 from a user-provided gene list TXT and a "
-            "user-provided maize ortholog matrix TSV, then export a matched .ortholog.tsv file."
+            "Extract ortholog rows for maize, wheat, or rice in EasyGS_2 from a user-provided "
+            "gene list. The species matrix is selected from EasyGS resources and matched "
+            "exactly against its first column."
         )
 
     @property
@@ -70,21 +85,22 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
                 "genelist_txt": {
                     "type": "string",
                     "description": (
-                        "User-provided gene list TXT with one maize gene ID per line. Example:\n"
-                        "Zm00001d031939\n"
-                        "Zm00001d031940\n"
-                        "Zm00001d031941\n"
-                        "Zm00001d031942"
+                        "User-provided gene list TXT with one gene ID per line. Example for "
+                        "wheat:\n"
+                        "TraesCS6A03G0926000\n"
+                        "TraesCS3D03G0591600\n"
+                        "TraesCS3B03G0806700\n"
+                        "TraesCS1D03G0346300"
                     ),
                 },
-                "ortholog_matrix_tsv": {
+                "species": {
                     "type": "string",
+                    "enum": ["maize", "wheat", "rice"],
+                    "default": "maize",
                     "description": (
-                        "User-provided maize ortholog matrix TSV. Example:\n"
-                        "Maize\tArabidopsis\tsorghum\tBrachypodium\trice\tsetaria\n"
-                        "GRMZM5G800096\tATCG01050\tABK79546,SORBI_K036300\tNA\tNA\tSi020851m.g\n"
-                        "GRMZM5G800101\tNA\tABK79539\tBRADI4G37052\tOS04G0473025\tNA\n"
-                        "GRMZM5G800457\tNA\tNA\tNA\tNA\tSi020789m.g"
+                        "Source species for the requested genes: maize, wheat, or rice. "
+                        "Default: maize. The matching ortholog matrix is resolved automatically "
+                        "from ~/.easygs/resources/ortholog_extraction_analysis/."
                     ),
                 },
                 "output_dir": {
@@ -97,27 +113,33 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
                 "output_filename": {
                     "type": "string",
                     "description": (
-                        "Optional output filename. Default: <genelist_stem>.ortholog.tsv, for example "
-                        "genelist.txt -> genelist.ortholog.tsv. If you want to override it, please "
-                        "provide it explicitly."
+                        "Optional output filename. Default: <genelist_stem>.ortholog.tsv; a "
+                        "trailing _genes is removed, so 100_wheat_genes.txt becomes "
+                        "100_wheat.ortholog.tsv."
                     ),
                 },
             },
-            "required": ["genelist_txt", "ortholog_matrix_tsv"],
+            "required": ["genelist_txt"],
         }
 
     async def execute(
         self,
         genelist_txt: str,
-        ortholog_matrix_tsv: str,
+        species: str = "maize",
         output_dir: str | None = None,
         output_filename: str | None = None,
         **kwargs: Any,
     ) -> str:
+        if kwargs.get("ortholog_matrix_tsv"):
+            return (
+                "Error: ortholog_matrix_tsv is no longer a public parameter for "
+                "ortholog_extraction_analysis. Select species=maize, wheat, or rice; EasyGS "
+                "will use the matching resource."
+            )
         try:
             prepared = await self.prepare_run(
                 genelist_txt=genelist_txt,
-                ortholog_matrix_tsv=ortholog_matrix_tsv,
+                species=species,
                 output_dir=output_dir,
                 output_filename=output_filename,
             )
@@ -129,6 +151,7 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
             details = self._join_output(run_result["stdout"], run_result["stderr"])
             return (
                 "Error: Ortholog extraction failed.\n"
+                f"- Species: {prepared.species}\n"
                 f"- Gene list TXT: {prepared.genelist_txt_path}\n"
                 f"- Ortholog matrix TSV: {prepared.ortholog_matrix_tsv_path}\n"
                 f"- Output dir: {prepared.output_dir}\n"
@@ -139,6 +162,7 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
         lines = [
             "Ortholog extraction completed.",
             f"- Launcher: {prepared.launcher}",
+            f"- Species: {prepared.species}",
             f"- Gene list TXT: {prepared.genelist_txt_path}",
             f"- Ortholog matrix TSV: {prepared.ortholog_matrix_tsv_path}",
             f"- Output dir: {prepared.output_dir}",
@@ -157,18 +181,16 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
         self,
         *,
         genelist_txt: str,
-        ortholog_matrix_tsv: str,
+        species: str = "maize",
         output_dir: str | None = None,
         output_filename: str | None = None,
     ) -> PreparedOrthologExtractionRun:
+        species_value = self._normalize_species(species)
         genelist_txt_path = self._resolve_text_file(genelist_txt, "Gene list TXT")
-        ortholog_matrix_tsv_path = self._resolve_text_file(
-            ortholog_matrix_tsv,
-            "Ortholog matrix TSV",
-        )
+        ortholog_matrix_tsv_path = self._resolve_matrix_resource(species_value)
 
         self._validate_non_empty_lines(genelist_txt_path, "Gene list TXT")
-        self._validate_tabular_preview(ortholog_matrix_tsv_path, min_columns=2, label="Ortholog matrix TSV")
+        self._validate_matrix(ortholog_matrix_tsv_path, species_value)
 
         output_root = self._resolve_output_dir(output_dir)
         output_filename_value = self._resolve_output_filename(output_filename, genelist_txt_path)
@@ -177,12 +199,13 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
 
         for label, path in {
             "pipeline script": self.script_path,
+            "extraction script": self.extraction_script_path,
             "summary script": self.summary_script_path,
         }.items():
             if not path.exists():
                 raise ValueError(f"{label} not found: {path}")
 
-        env_status = await self._get_environment_status(["grep", "python3"])
+        env_status = await self._get_environment_status(["python3"])
         if env_status["error"]:
             error = env_status["error"]
             raise ValueError(error[7:] if error.startswith("Error: ") else error)
@@ -196,18 +219,23 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
             str(self.script_path),
             "--genelist-txt",
             str(genelist_txt_path),
+            "--species",
+            species_value,
             "--ortholog-matrix-tsv",
             str(ortholog_matrix_tsv_path),
             "--output-tsv",
             str(output_tsv_path),
             "--summary-output",
             str(summary_path),
+            "--extraction-script",
+            str(self.extraction_script_path),
             "--summary-script",
             str(self.summary_script_path),
         ]
 
         return PreparedOrthologExtractionRun(
             launcher=env_status["launcher"],
+            species=species_value,
             command=command,
             genelist_txt_path=genelist_txt_path,
             ortholog_matrix_tsv_path=ortholog_matrix_tsv_path,
@@ -226,8 +254,32 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
             raise ValueError(f"{label} must be a file: {path}")
         return path
 
+    def _normalize_species(self, value: str) -> str:
+        species = str(value).strip().lower()
+        if species not in _SPECIES_MATRIX_FILENAMES:
+            allowed = ", ".join(_SPECIES_MATRIX_FILENAMES)
+            raise ValueError(f"species must be one of: {allowed}")
+        return species
+
+    def _resolve_matrix_resource(self, species: str) -> Path:
+        filename = _SPECIES_MATRIX_FILENAMES[species]
+        path = self.matrix_resource_paths[species]
+        if not path.exists():
+            raise ValueError(
+                "Missing required resource for ortholog_extraction_analysis:\n"
+                f"{path}\n\n"
+                f"Please prepare {filename} and place it at the path above. Set "
+                "EASYGS_RESOURCES_DIR to use a different resource root."
+            )
+        if not path.is_file():
+            raise ValueError(f"Ortholog matrix resource must be a file: {path}")
+        return path
+
     def _resolve_output_filename(self, value: str | None, genelist_txt_path: Path) -> str:
-        default_name = f"{genelist_txt_path.stem}.ortholog.tsv"
+        default_stem = genelist_txt_path.stem
+        if default_stem.endswith("_genes"):
+            default_stem = default_stem[: -len("_genes")]
+        default_name = f"{default_stem}.ortholog.tsv"
         candidate = (value or "").strip()
         if not candidate:
             return default_name
@@ -243,19 +295,22 @@ class RunOrthologExtractionTool(PlinkToolBase, Tool):
         if not lines:
             raise ValueError(f"{label} is empty: {path}")
 
-    def _validate_tabular_preview(self, path: Path, min_columns: int, label: str) -> None:
-        valid_rows = 0
+    def _validate_matrix(self, path: Path, species: str) -> None:
         with path.open("r", encoding="utf-8", errors="replace") as handle:
             for raw in handle:
-                line = raw.rstrip("\n")
+                line = raw.rstrip("\r\n")
                 if not line.strip():
                     continue
-                if len(line.split("\t")) < min_columns:
+                fields = line.split("\t")
+                if len(fields) < 2:
                     raise ValueError(
-                        f"{label} must be tab-delimited with at least {min_columns} columns: {path}"
+                        f"Ortholog matrix must be tab-delimited with at least 2 columns: {path}"
                     )
-                valid_rows += 1
-                if valid_rows >= 3:
-                    break
-        if valid_rows == 0:
-            raise ValueError(f"{label} is empty: {path}")
+                source_header = fields[0].lstrip("\ufeff").strip().lower()
+                if source_header != species:
+                    raise ValueError(
+                        f"Ortholog matrix first header must be {species.title()!r}, found "
+                        f"{fields[0]!r}: {path}"
+                    )
+                return
+        raise ValueError(f"Ortholog matrix is empty: {path}")

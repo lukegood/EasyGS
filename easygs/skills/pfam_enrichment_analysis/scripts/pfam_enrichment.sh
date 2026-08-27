@@ -7,7 +7,7 @@ usage() {
 Usage:
   pfam_enrichment.sh \
     --genelist-txt <genelist.txt> \
-    --longest-cds-txt <all_maize_longest_cds.txt> \
+    --species <maize|wheat|rice> \
     --proteins-tsv <all_maize_genes_proteins.fa.tsv> \
     --annotation-source <Pfam> \
     --min-count-in-candidates <5> \
@@ -19,8 +19,10 @@ Usage:
     --all-enrichment-csv-output <pfam_enrichment_all_pfam_enrichment.csv> \
     --sig-enrichment-csv-output <pfam_enrichment_sig_pfam.csv> \
     --summary-output <pfam_enrichment_summary.txt> \
+    --preprocess-script <prepare_pfam_annotations.py> \
     --r-script <run_pfam_enrichment.R> \
     --summary-script <summarize_pfam_enrichment.py> \
+    [--longest-cds-txt <all_maize_longest_cds.txt>] \
     [--background-protein-txt <background.txt>]
 
 Required tools:
@@ -35,6 +37,7 @@ EOF
 }
 
 genelist_txt=""
+species=""
 longest_cds_txt=""
 proteins_tsv=""
 background_protein_txt=""
@@ -48,12 +51,14 @@ source_annotation_tsv_output=""
 all_enrichment_csv_output=""
 sig_enrichment_csv_output=""
 summary_output=""
+preprocess_script=""
 r_script=""
 summary_script=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --genelist-txt) genelist_txt="$2"; shift 2 ;;
+    --species) species="$2"; shift 2 ;;
     --longest-cds-txt) longest_cds_txt="$2"; shift 2 ;;
     --proteins-tsv) proteins_tsv="$2"; shift 2 ;;
     --background-protein-txt) background_protein_txt="$2"; shift 2 ;;
@@ -67,6 +72,7 @@ while [ "$#" -gt 0 ]; do
     --all-enrichment-csv-output) all_enrichment_csv_output="$2"; shift 2 ;;
     --sig-enrichment-csv-output) sig_enrichment_csv_output="$2"; shift 2 ;;
     --summary-output) summary_output="$2"; shift 2 ;;
+    --preprocess-script) preprocess_script="$2"; shift 2 ;;
     --r-script) r_script="$2"; shift 2 ;;
     --summary-script) summary_script="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -76,7 +82,7 @@ done
 
 for required in \
   "$genelist_txt" \
-  "$longest_cds_txt" \
+  "$species" \
   "$proteins_tsv" \
   "$annotation_source" \
   "$min_count_in_candidates" \
@@ -88,6 +94,7 @@ for required in \
   "$all_enrichment_csv_output" \
   "$sig_enrichment_csv_output" \
   "$summary_output" \
+  "$preprocess_script" \
   "$r_script" \
   "$summary_script"
 do
@@ -105,12 +112,19 @@ for tool in Rscript awk python3; do
   fi
 done
 
-for input_file in "$genelist_txt" "$longest_cds_txt" "$proteins_tsv" "$r_script" "$summary_script"; do
+for input_file in "$genelist_txt" "$proteins_tsv" "$preprocess_script" "$r_script" "$summary_script"; do
   if [ ! -f "$input_file" ]; then
     echo "Required input file not found: $input_file" >&2
     exit 1
   fi
 done
+
+if [ "$species" = "maize" ]; then
+  if [ -z "$longest_cds_txt" ] || [ ! -f "$longest_cds_txt" ]; then
+    echo "Maize longest-CDS resource not found: $longest_cds_txt" >&2
+    exit 1
+  fi
+fi
 
 if [ -n "$background_protein_txt" ] && [ ! -f "$background_protein_txt" ]; then
   echo "Background protein TXT not found: $background_protein_txt" >&2
@@ -124,17 +138,28 @@ mkdir -p "$(dirname "$all_enrichment_csv_output")"
 mkdir -p "$(dirname "$sig_enrichment_csv_output")"
 mkdir -p "$(dirname "$summary_output")"
 
-awk 'NR==FNR {ids[$1]=1; next} (($1) in ids) && NF >= 2 {print $2}' "$genelist_txt" "$longest_cds_txt" \
-  | awk 'NF > 0 && !seen[$0]++' > "$protlist_output"
+if [ "$species" = "maize" ]; then
+  awk 'NR==FNR {ids[$1]=1; next} (($1) in ids) && NF >= 2 {print $2}' "$genelist_txt" "$longest_cds_txt" \
+    | awk 'NF > 0 && !seen[$0]++' > "$protlist_output"
 
-awk 'NR==FNR {ids[$1]=1; next} (($1) in ids)' "$protlist_output" "$proteins_tsv" > "$protlist_stranno_output"
+  awk 'NR==FNR {ids[$1]=1; next} (($1) in ids)' "$protlist_output" "$proteins_tsv" > "$protlist_stranno_output"
 
-awk -v src="$annotation_source" 'BEGIN {FS=OFS="\t"} NF >= 5 && $4 == src && $5 != "" && $5 != "-" {print $0}' \
-  "$proteins_tsv" > "$source_annotation_tsv_output"
+  awk -v src="$annotation_source" 'BEGIN {FS=OFS="\t"} NF >= 5 && $4 == src && $5 != "" && $5 != "-" {print $0}' \
+    "$proteins_tsv" > "$source_annotation_tsv_output"
+else
+  python3 "$preprocess_script" \
+    --genelist-txt "$genelist_txt" \
+    --proteins-tsv "$proteins_tsv" \
+    --annotation-source "$annotation_source" \
+    --protlist-output "$protlist_output" \
+    --protlist-stranno-output "$protlist_stranno_output" \
+    --source-annotation-tsv-output "$source_annotation_tsv_output"
+fi
 
 if [ -n "$background_protein_txt" ]; then
   Rscript "$r_script" \
     --protlist-txt "$protlist_output" \
+    --species "$species" \
     --source-annotation-tsv "$source_annotation_tsv_output" \
     --background-protein-txt "$background_protein_txt" \
     --annotation-source "$annotation_source" \
@@ -146,6 +171,7 @@ if [ -n "$background_protein_txt" ]; then
 else
   Rscript "$r_script" \
     --protlist-txt "$protlist_output" \
+    --species "$species" \
     --source-annotation-tsv "$source_annotation_tsv_output" \
     --annotation-source "$annotation_source" \
     --min-count-in-candidates "$min_count_in_candidates" \
@@ -157,6 +183,7 @@ fi
 
 python3 "$summary_script" \
   --genelist-txt "$genelist_txt" \
+  --species "$species" \
   --longest-cds-txt "$longest_cds_txt" \
   --proteins-tsv "$proteins_tsv" \
   --background-protein-txt "$background_protein_txt" \

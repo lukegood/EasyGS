@@ -1,68 +1,68 @@
 ---
 name: peak_annotation_analysis
-description: Run maize-only ChIPseeker-based locus structural annotation from a BED file using the user-managed Zea mays GFF3 annotation resource.
+description: Run ChIPseeker-based locus structural annotation for maize, wheat, or rice from a BED file using the matching user-managed GFF3 resource.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
 # Peak Annotation Skill
 
-Run maize locus structural annotation using the built-in `peak_annotation_analysis` tool.
+Run maize, wheat, or rice locus structural annotation using the built-in
+`peak_annotation_analysis` tool.
 
-Species scope:
-- maize only (`Zea mays`)
-- default annotation resource:
+Species resources:
+
+- `maize` (`Zea mays`), the legacy default:
   `~/.easygs/resources/peak_annotation_analysis/Zea_mays.B73_RefGen_v4.43_modify.gff3`
+- `wheat` (`Triticum aestivum`):
+  `~/.easygs/resources/peak_annotation_analysis/Taestivumcv_ChineseSpring_725_v2.1.gene.gff3`
+- `rice` (`Oryza sativa`):
+  `~/.easygs/resources/peak_annotation_analysis/Osativa_323_v7.0.gene.gff3`
 - if `EASYGS_RESOURCES_DIR` is set, the tool uses that directory as the resource root
 
-This should be treated as one complete workflow rather than separate user-facing steps, because the analysis depends on one tightly coupled chain:
+This is one complete workflow:
 
-1. validate the maize GFF3 annotation resource and the BED loci file
-2. build a `TxDb` object from the GFF3 annotation resource
-3. read the BED loci as peaks
-4. run `annotatePeak()` with the chosen TSS window
-5. export the annotation table and annotation pie chart
-6. write a compact summary
+1. select and validate the species-specific GFF3 resource and BED loci file
+2. verify that every BED chromosome name occurs in the selected GFF3
+3. build a `TxDb` object from the GFF3 annotation resource
+4. read the BED loci as peaks
+5. run `annotatePeak()` with the chosen TSS window
+6. export the annotation table and annotation pie chart
+7. write a compact summary
 
-Do not split this into separate public tools for `TxDb` construction, peak loading, or pie-chart drawing. Those stay internal inside one complete workflow.
+Do not split this into separate public tools for `TxDb` construction, peak loading, or pie-chart
+drawing.
 
 ## Tool-First Rule
 
 Use `peak_annotation_analysis(...)` for execution.
 
-## What the Tool Runs
-
-The bundled pipeline:
-
-1. reads the maize GFF3 gene annotation resource from `~/.easygs/resources/peak_annotation_analysis/`
-2. builds a `TxDb` object with `txdbmaker::makeTxDbFromGFF()`
-3. reads the BED loci with `ChIPseeker::readPeakFile()`
-4. runs `ChIPseeker::annotatePeak()` with a TSS region
-5. writes `<prefix>.peakanno.tsv`
-6. writes `<prefix>.peakanno.png`
-7. writes a compact summary text file
-
 ## Required Inputs
 
-- `bed`: BED file containing loci or peaks. Example:
+- `bed`: BED file containing loci or peaks, with at least three tab-separated columns and
+  coordinates satisfying `0 <= start < end`. Example:
 
 ```text
-1	207606062	207606063
-2	180017154	180017155
-2	191156851	191156852
-2	195873477	195873478
+Chr1	207606062	207606063
+Chr2	180017154	180017155
+Chr2	191156851	191156852
+Chr3	7214472	7214473
 ```
+
+For wheat, chromosomes include a subgenome suffix, for example `Chr1A`, `Chr3B`, or `Chr7D`.
 
 ## Optional Parameters
 
-- `output_dir`: root directory for outputs; when omitted, the runtime supplies the default for the current context
-- `output_prefix`: basename/path prefix for outputs. Default: BED stem, such as `locilist`
-- `tss_upstream`: upstream TSS annotation window in bp. Default: `2000`
-- `tss_downstream`: downstream TSS annotation window in bp. Default: `500`
-- `gff3`: explicit maize GFF3 path. Normally leave this unset and use the default resource path; set `EASYGS_RESOURCES_DIR` if the resource root is different.
+- `species`: `maize`, `wheat`, or `rice`; default: `maize`
+- `output_dir`: root directory for outputs; when omitted, the runtime supplies the current
+  context's default
+- `output_prefix`: basename/path prefix for outputs; default: BED stem, such as `locilist`
+- `tss_upstream`: upstream TSS annotation window in bp; default: `2000`
+- `tss_downstream`: downstream TSS annotation window in bp; default: `500`
 
-If the user wants any of these changed, ask them to provide the override explicitly instead of guessing.
+The GFF3 path is intentionally not a public parameter. The tool selects it from the resource
+directory according to `species` and reports the exact required path when it is missing.
 
-Default output pattern:
+Default outputs:
 
 - `<output_dir>/<prefix>.peakanno.tsv`
 - `<output_dir>/<prefix>.peakanno.png`
@@ -70,36 +70,37 @@ Default output pattern:
 
 ## Pre-Run Validation
 
-Before running analysis, remember that the tool itself always checks whether the required environment exists:
+The tool checks:
 
-- `EasyGS_1`
+- environment `EasyGS_1`
+- executables `Rscript` and `python3`
+- R packages `ChIPseeker`, `GenomicFeatures`, `ggplot2`, `txdbmaker`, and `dplyr`
+- the selected species resource exists and contains GFF features
+- the BED has valid rows and chromosome names matching the GFF3
 
-Behavior rules:
-
-- The tool will stop automatically if the `EasyGS_1` environment is missing
-- The tool will stop automatically if `Rscript` or `python3` is not available inside `EasyGS_1`
-- The pipeline will stop automatically if the required R packages are unavailable:
-  `ChIPseeker`, `GenomicFeatures`, `ggplot2`, `txdbmaker`, `dplyr`
-- If the environment check fails, report it clearly and stop
+Stop and report the exact error if any check fails.
 
 ## Parameter Collection Rules
 
-Before calling `peak_annotation_analysis(...)`, collect the required BED path unless it is already available in the conversation.
+Before calling `peak_annotation_analysis(...)`, collect the BED path and species unless already
+available in the conversation. Omitting species intentionally keeps the legacy maize default.
 
 Behavior rules:
 
-- When asking for required input files, always provide data examples with 3 to 4 sample rows together with the format description
-- If mentioning optional parameters, always tell the user the default values and remind them to provide overrides explicitly
-- The loci input must be `.bed`
-- Do not ask the user for an annotation file unless the default resource is missing
-- This skill is maize-only and does not support non-maize annotations
-- If the user does not mention an output location, it is acceptable to use the tool defaults
+- When asking for BED input, show three or four example rows and describe the format
+- Do not ask the user for an annotation file; report the exact missing resource path instead
+- Never expose a GFF3 path as a normal tool parameter
+- Infer species only when unambiguous; otherwise ask whether the data are maize, wheat, or rice
+- BED chromosome names must match the selected GFF3 exactly, such as `Chr1` for rice and `Chr1A`
+  for wheat
+- If no output location is mentioned, use the tool defaults
 - Do not invent file paths
 
 ## Result Interpretation
 
-After a successful run, the summary should highlight:
+After a successful run, highlight:
 
+- the selected species and resource
 - the output TSV and PNG paths
 - the annotation row count
-- the main annotation categories and their counts when inferable
+- the main annotation categories and counts when available

@@ -50,10 +50,12 @@ RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
       bzip2 \
       ca-certificates \
       curl \
+      findutils \
       git \
       gosu \
       procps \
       tini \
+      tmux \
       unzip \
       wget \
       xz-utils \
@@ -83,12 +85,11 @@ WORKDIR /app
 COPY container/envs/ container/envs/
 RUN set -eux; \
     mamba install -y -n base nodejs=22; \
-    for env_file in container/envs/EasyGS_1.yml container/envs/EasyGS_2.yml container/envs/EasyGS_3.yml container/envs/EasyGS_4.yml; do \
+    for env_file in container/envs/EasyGS_*.yml; do \
       mamba env create --yes -f "${env_file}"; \
     done; \
     mamba run -n EasyGS_1 Rscript -e "install.packages('corrgram', repos=Sys.getenv('R_REPOS'))"; \
     mamba run -n EasyGS_2 Rscript -e "install.packages('sommer', repos=Sys.getenv('R_REPOS'))"; \
-    mamba run -n EasyGS_4 Rscript -e "install.packages('Fast3VmrMLM', repos=Sys.getenv('R_REPOS'))"; \
     mamba clean -afy
 
 RUN set -eux; \
@@ -99,10 +100,58 @@ RUN set -eux; \
       r-mass \
       r-openxlsx \
       r-bh \
+      r-bedmatrix \
       boost \
       tbb=2020.2; \
-    mamba run -n EasyGS_4 Rscript -e "zip <- tempfile(fileext = '.zip'); root <- tempfile(); dir.create(root); download.file('https://github.com/YuanmingZhang65/Fast3VmrMLM/archive/refs/heads/main.zip', zip, mode = 'wb'); unzip(zip, exdir = root); unzip(file.path(root, 'Fast3VmrMLM-main', 'Fast3VmrMLM_Linux_2.0.zip'), exdir = root); install.packages(file.path(root, 'Fast3VmrMLM'), repos = NULL, type = 'source')"; \
+    curl -fL \
+      --retry 5 \
+      --retry-all-errors \
+      --connect-timeout 30 \
+      --max-time 600 \
+      -o /tmp/Fast3VmrMLM-main.zip \
+      https://github.com/YuanmingZhang65/Fast3VmrMLM/archive/refs/heads/main.zip; \
+    mamba run -n EasyGS_4 Rscript -e "root <- tempfile(); dir.create(root); unzip('/tmp/Fast3VmrMLM-main.zip', exdir = root); unzip(file.path(root, 'Fast3VmrMLM-main', 'Fast3VmrMLM_Linux_2.0.zip'), exdir = root); install.packages(file.path(root, 'Fast3VmrMLM'), repos = NULL, type = 'source')"; \
+    rm -f /tmp/Fast3VmrMLM-main.zip; \
     mamba clean -afy
+
+# Bioconda data packages are fetched by post-link scripts. Repair only missing
+# packages with retries because the primary Bioconductor host can be slow.
+RUN set -eux; \
+    env_prefix=/opt/conda/envs/EasyGS_1; \
+    installer="${env_prefix}/bin/installBiocDataPackage.sh"; \
+    data_json="${env_prefix}/share/bioconductor-data-packages/dataURLs.json"; \
+    sed -i \
+      's|curl -L $URL > $TARBALL|if ! curl -fL --retry 2 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$TARBALL" "$URL"; then continue; fi|' \
+      "${installer}"; \
+    sed -i '/^SUCCESS=0$/i URLS=("${URLS[@]:1}" "${URLS[0]}")' "${installer}"; \
+    for package_spec in \
+      'GenomeInfoDbData:bioconductor-genomeinfodbdata:genomeinfodbdata-' \
+      'GO.db:bioconductor-go.db:go.db-' \
+      'TxDb.Hsapiens.UCSC.hg19.knownGene:bioconductor-txdb.hsapiens.ucsc.hg19.knowngene:txdb.hsapiens.ucsc.hg19.knowngene-'; do \
+      r_package="${package_spec%%:*}"; \
+      package_spec="${package_spec#*:}"; \
+      conda_package="${package_spec%%:*}"; \
+      json_prefix="${package_spec#*:}"; \
+      if ! mamba run -n EasyGS_1 Rscript -e "quit(status = !requireNamespace('${r_package}', quietly = TRUE))"; then \
+        package_version="$("${env_prefix}/bin/python" -c "import glob, json; paths = glob.glob('${env_prefix}/conda-meta/${conda_package}-*.json'); assert len(paths) == 1, paths; print(json.load(open(paths[0]))['version'])")"; \
+        package_key="${json_prefix}${package_version}"; \
+        mamba run -n EasyGS_1 yq -e ".\"${package_key}\"" "${data_json}" >/dev/null; \
+        PREFIX="${env_prefix}" mamba run -n EasyGS_1 bash "${installer}" "${package_key}"; \
+      fi; \
+    done
+
+RUN set -eux; \
+    mamba run -n EasyGS_1 bash -c 'for tool in python3 Rscript bcftools; do command -v "$tool"; done'; \
+    mamba run -n EasyGS_1 Rscript -e "invisible(lapply(c('rMVP', 'corrgram', 'clusterProfiler', 'ChIPseeker'), library, character.only = TRUE))"; \
+    mamba run -n EasyGS_2 bash -c 'for tool in python3 Rscript plink vcftools bcftools bedtools gcta64 admixture PopLDdecay java; do command -v "$tool"; done'; \
+    mamba run -n EasyGS_2 Rscript -e "stopifnot(requireNamespace('sommer', quietly=TRUE))"; \
+    mamba run -n EasyGS_3 bash -c 'for tool in python3 Rscript; do command -v "$tool"; done'; \
+    mamba run -n EasyGS_3 Rscript -e "stopifnot(requireNamespace('rrBLUP', quietly=TRUE), requireNamespace('lmerTest', quietly=TRUE))"; \
+    mamba run -n EasyGS_4 bash -c 'for tool in python3 Rscript; do command -v "$tool"; done'; \
+    mamba run -n EasyGS_4 Rscript -e "library(Fast3VmrMLM)"; \
+    mamba run -n EasyGS_5 bash -c 'for tool in python3 fastp bwa samtools picard gatk bcftools bgzip tabix; do command -v "$tool"; done'; \
+    command -v tmux; \
+    command -v xargs
 
 COPY pyproject.toml README.md README_zh.md LICENSE ./
 COPY easygs/ easygs/
@@ -113,7 +162,12 @@ COPY --from=webui-builder /src/easygs/web/dist easygs/web/dist
 RUN find easygs/skills -type l -delete
 
 RUN python -m pip install --no-cache-dir --upgrade pip \
-    && python -m pip install --no-cache-dir .
+    && python -m pip install --no-cache-dir . \
+    && easygs --version \
+    && test -f easygs/web/dist/index.html \
+    && if [ ! -f softwares/beagle.29Oct24.c8e.jar ]; then \
+         echo "Warning: Beagle resource is missing; genotype imputation will be unavailable." >&2; \
+       fi
 
 RUN cd bridge \
     && npm config set registry "${NPM_REGISTRY}" \

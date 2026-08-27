@@ -2,7 +2,86 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
+
+
+def _usage_int(usage: Mapping[str, Any], *keys: str) -> int | None:
+    """Return the first non-negative integer usage value for the requested keys."""
+    for key in keys:
+        value = usage.get(key)
+        if value is None or isinstance(value, bool):
+            continue
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number >= 0:
+            return number
+    return None
+
+
+def normalize_token_usage(usage: Mapping[str, Any] | None) -> tuple[int, int] | None:
+    """Normalize provider usage into total input and output tokens.
+
+    ``total_tokens - output_tokens`` is preferred because OpenAI-compatible
+    gateways (including ccLoad) report cached input inside ``total_tokens``.
+    When an Anthropic-style response separates uncached input from cache read
+    and cache creation tokens, those cache fields are added exactly once.
+    """
+    if not usage:
+        return None
+
+    output_tokens = _usage_int(usage, "completion_tokens", "output_tokens")
+    total_tokens = _usage_int(usage, "total_tokens")
+    if total_tokens is not None and output_tokens is not None and total_tokens >= output_tokens:
+        return total_tokens - output_tokens, output_tokens
+
+    prompt_tokens = _usage_int(usage, "prompt_tokens")
+    input_tokens = prompt_tokens
+    if input_tokens is None:
+        input_tokens = _usage_int(usage, "input_tokens")
+        if input_tokens is not None:
+            input_tokens += _usage_int(
+                usage, "cache_read_input_tokens", "cache_read_tokens"
+            ) or 0
+            input_tokens += _usage_int(
+                usage, "cache_creation_input_tokens", "cache_creation_tokens"
+            ) or 0
+
+    if output_tokens is None and total_tokens is not None and input_tokens is not None:
+        if total_tokens >= input_tokens:
+            output_tokens = total_tokens - input_tokens
+
+    if input_tokens is None or output_tokens is None:
+        return None
+    return input_tokens, output_tokens
+
+
+@dataclass
+class TokenUsageAccumulator:
+    """Accumulate normalized usage while retaining completeness diagnostics."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    llm_call_count: int = 0
+    usage_reported_call_count: int = 0
+
+    def add(self, usage: Mapping[str, Any] | None) -> None:
+        self.llm_call_count += 1
+        normalized = normalize_token_usage(usage)
+        if normalized is None:
+            return
+        input_tokens, output_tokens = normalized
+        self.input_tokens += input_tokens
+        self.output_tokens += output_tokens
+        self.usage_reported_call_count += 1
+
+    @property
+    def usage_complete(self) -> bool:
+        return (
+            self.llm_call_count > 0
+            and self.llm_call_count == self.usage_reported_call_count
+        )
 
 
 @dataclass

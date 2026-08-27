@@ -1,6 +1,7 @@
 """Tools for agentic workflow submission and inspection."""
 
-from typing import Any, TYPE_CHECKING
+from contextvars import ContextVar
+from typing import TYPE_CHECKING, Any
 
 from easygs.agent.tools.base import Tool
 
@@ -13,9 +14,18 @@ class SubmitWorkflowTool(Tool):
 
     def __init__(self, workflows: "WorkflowService"):
         self._workflows = workflows
-        self._origin_channel = "cli"
-        self._origin_chat_id = "direct"
-        self._last_execution_metadata: dict[str, Any] = {}
+        self._origin_context: ContextVar[tuple[str, str]] = ContextVar(
+            f"submit_workflow_origin_{id(self)}",
+            default=("cli", "direct"),
+        )
+        self._task_metrics: ContextVar[dict[str, int] | None] = ContextVar(
+            f"submit_workflow_metrics_{id(self)}",
+            default=None,
+        )
+        self._execution_metadata: ContextVar[dict[str, Any] | None] = ContextVar(
+            f"submit_workflow_execution_metadata_{id(self)}",
+            default=None,
+        )
 
     @property
     def terminal_after_execution(self) -> bool:
@@ -23,11 +33,15 @@ class SubmitWorkflowTool(Tool):
 
     @property
     def last_execution_metadata(self) -> dict[str, Any]:
-        return dict(self._last_execution_metadata)
+        return dict(self._execution_metadata.get() or {})
 
     def set_context(self, channel: str, chat_id: str) -> None:
-        self._origin_channel = channel
-        self._origin_chat_id = chat_id
+        self._origin_context.set((channel, chat_id))
+        self._task_metrics.set(None)
+
+    def set_task_metrics(self, metrics: dict[str, int]) -> None:
+        """Attach foreground usage to the next workflow submission."""
+        self._task_metrics.set(dict(metrics))
 
     @property
     def name(self) -> str:
@@ -100,22 +114,32 @@ class SubmitWorkflowTool(Tool):
         expected_outputs: list[str] | None = None,
         **kwargs: Any,
     ) -> str:
+        origin_channel, origin_chat_id = self._origin_context.get()
+        task_metrics = self._task_metrics.get() or {}
         workflow = await self._workflows.submit_workflow(
             request=request,
             name=name,
-            origin_channel=self._origin_channel,
-            origin_chat_id=self._origin_chat_id,
+            origin_channel=origin_channel,
+            origin_chat_id=origin_chat_id,
             notify_on_completion=notify_on_completion,
             output_dir=output_dir,
             plan_summary=plan_summary,
             planned_steps=planned_steps,
             expected_outputs=expected_outputs,
+            task_started_at_ms=task_metrics.get("task_started_at_ms"),
+            initial_input_tokens=task_metrics.get("input_tokens", 0),
+            initial_output_tokens=task_metrics.get("output_tokens", 0),
+            initial_llm_call_count=task_metrics.get("llm_call_count", 0),
+            initial_usage_reported_call_count=task_metrics.get(
+                "usage_reported_call_count", 0
+            ),
         )
-        self._last_execution_metadata = {
+        self._task_metrics.set(None)
+        self._execution_metadata.set({
             "active_workflow_id": workflow.id,
             "workflow_id": workflow.id,
             "workflow_name": workflow.name,
-        }
+        })
         lines = [
             f"Background workflow submitted: `{workflow.id}`",
             f"Name: {workflow.name}",
@@ -284,6 +308,10 @@ class CancelWorkflowTool(Tool):
     def set_context(self, channel: str, chat_id: str) -> None:
         self._origin_channel = channel
         self._origin_chat_id = chat_id
+
+    @property
+    def terminal_after_execution(self) -> bool:
+        return True
 
     @property
     def name(self) -> str:

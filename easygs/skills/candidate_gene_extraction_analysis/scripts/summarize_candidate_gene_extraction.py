@@ -9,11 +9,13 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize candidate gene extraction outputs.")
+    parser.add_argument("--species", required=True, choices=["maize", "wheat", "rice"])
     parser.add_argument("--bed", required=True)
     parser.add_argument("--ld-distance", required=True, type=int)
     parser.add_argument("--gene-bed", required=True)
     parser.add_argument("--extended-bed-output", required=True)
     parser.add_argument("--gene-list-output", required=True)
+    parser.add_argument("--detailed-output", required=True)
     parser.add_argument("--summary-output", required=True)
     return parser.parse_args()
 
@@ -21,7 +23,11 @@ def parse_args() -> argparse.Namespace:
 def _read_nonempty_lines(path: Path) -> list[str]:
     if not path.exists():
         return []
-    return [line.strip() for line in path.read_text(encoding="utf-8", errors="replace").splitlines() if line.strip()]
+    return [
+        line.strip()
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
+        if line.strip()
+    ]
 
 
 def main() -> int:
@@ -29,22 +35,27 @@ def main() -> int:
     bed_path = Path(args.bed)
     extended_bed_path = Path(args.extended_bed_output)
     gene_list_path = Path(args.gene_list_output)
+    detailed_path = Path(args.detailed_output)
     summary_path = Path(args.summary_output)
 
     bed_rows = _read_nonempty_lines(bed_path)
     extended_rows = _read_nonempty_lines(extended_bed_path)
     genes = _read_nonempty_lines(gene_list_path)
+    detailed_rows = _read_nonempty_lines(detailed_path)
     unique_genes = list(dict.fromkeys(genes))
 
     lines = [
         "=== 候选基因提取 ===",
+        f"Species: {args.species}",
         f"BED: {bed_path}",
         f"LD distance: {args.ld_distance}bp",
         f"Gene annotation BED: {args.gene_bed}",
         f"Extended BED: {extended_bed_path}",
         f"Gene list: {gene_list_path}",
+        f"Detailed matches: {detailed_path}",
         f"Input BED rows: {len(bed_rows)}",
         f"Extended BED rows: {len(extended_rows)}",
+        f"Detailed match rows: {len(detailed_rows)}",
         f"Candidate genes: {len(genes)}",
         f"Unique candidate genes: {len(unique_genes)}",
     ]

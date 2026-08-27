@@ -1,6 +1,6 @@
 [project]
 name = "easygs"
-version = "0.1.6"
+version = "0.1.5"
 description = "A lightweight personal AI assistant framework"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -56,6 +56,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["easygs"]
+artifacts = ["easygs/web/dist/**"]
 
 [tool.hatch.build.targets.wheel.sources]
 "easygs" = "easygs"
@@ -64,7 +65,6 @@ packages = ["easygs"]
 [tool.hatch.build]
 include = [
     "easygs/**/*.py",
-    "easygs/web/dist/**",
     "easygs/skills/**/*.md",
     "easygs/skills/**/*.yaml",
     "easygs/skills/**/*.bed",
@@ -87,7 +87,6 @@ artifacts = [
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
-"easygs/web/dist" = "easygs/web/dist"
 "bridge" = "easygs/bridge"
 "softwares" = "easygs/softwares"
 

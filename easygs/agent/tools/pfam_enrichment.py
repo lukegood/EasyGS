@@ -1,4 +1,4 @@
-"""PFAM/domain enrichment tool using user-managed maize annotation resources."""
+"""PFAM/domain enrichment using species-specific user-managed resources."""
 
 from __future__ import annotations
 
@@ -11,19 +11,26 @@ from easygs.agent.tools.filesystem import _resolve_path
 from easygs.agent.tools.plink_common import PlinkToolBase
 from easygs.resources import resolve_user_resource_path
 
+_SPECIES_ANNOTATION_FILENAMES = {
+    "maize": "all_maize_genes_proteins.fa.tsv",
+    "wheat": "wheat_interpro.tsv",
+    "rice": "Osativa_323_v7.0.protein_primaryTranscriptOnly.fa.tsv",
+}
+
 
 @dataclass
 class PreparedPfamEnrichmentRun:
     """Prepared execution plan for PFAM/domain enrichment."""
 
     launcher: str
+    species: str
     annotation_source: str
     min_count_in_candidates: int
     p_adjust_method: str
     fdr_cutoff: float
     command: list[str]
     genelist_txt_path: Path
-    longest_cds_txt_path: Path
+    longest_cds_txt_path: Path | None
     proteins_tsv_path: Path
     background_protein_txt_path: Path | None
     output_dir: Path
@@ -39,12 +46,15 @@ class PreparedPfamEnrichmentRun:
     def to_metadata(self) -> dict[str, Any]:
         return {
             "launcher": self.launcher,
+            "species": self.species,
             "annotation_source": self.annotation_source,
             "min_count_in_candidates": self.min_count_in_candidates,
             "p_adjust_method": self.p_adjust_method,
             "fdr_cutoff": self.fdr_cutoff,
             "genelist_txt_path": str(self.genelist_txt_path),
-            "longest_cds_txt_path": str(self.longest_cds_txt_path),
+            "longest_cds_txt_path": (
+                str(self.longest_cds_txt_path) if self.longest_cds_txt_path else ""
+            ),
             "proteins_tsv_path": str(self.proteins_tsv_path),
             "background_protein_txt_path": (
                 str(self.background_protein_txt_path) if self.background_protein_txt_path else ""
@@ -63,7 +73,7 @@ class PreparedPfamEnrichmentRun:
 
 
 class RunPfamEnrichmentTool(PlinkToolBase, Tool):
-    """Run maize candidate-protein extraction and PFAM/domain enrichment."""
+    """Run maize, wheat, or rice PFAM/domain enrichment."""
 
     def __init__(self, workspace: Path, restrict_to_workspace: bool = False, timeout: int = 7200):
         super().__init__(
@@ -75,11 +85,16 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
             env_name="EasyGS_2",
         )
         self.script_path = self.skill_dir / "pfam_enrichment.sh"
+        self.preprocess_script_path = self.skill_dir / "prepare_pfam_annotations.py"
         self.r_script_path = self.skill_dir / "run_pfam_enrichment.R"
         self.summary_script_path = self.skill_dir / "summarize_pfam_enrichment.py"
         self.resource_dir = resolve_user_resource_path("pfam_enrichment_analysis")
         self.longest_cds_txt_path = self.resource_dir / "all_maize_longest_cds.txt"
         self.proteins_tsv_path = self.resource_dir / "all_maize_genes_proteins.fa.tsv"
+        self.annotation_resource_paths = {
+            species: self.resource_dir / filename
+            for species, filename in _SPECIES_ANNOTATION_FILENAMES.items()
+        }
 
     @property
     def name(self) -> str:
@@ -88,11 +103,9 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
     @property
     def description(self) -> str:
         return (
-            "Run protein-list extraction from a gene list using maize longest-CDS mapping "
-            "and maize protein-annotation TSV resources from "
-            "~/.easygs/resources/pfam_enrichment_analysis/, then perform PFAM/domain enrichment "
-            "in EasyGS_2. "
-            "This tool supports maize data only."
+            "Run PFAM/domain enrichment for maize, wheat, or rice in EasyGS_2. Species-specific "
+            "annotation resources are selected automatically; large wheat/rice InterProScan "
+            "files are processed as streams."
         )
 
     @property
@@ -103,26 +116,33 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
                 "genelist_txt": {
                     "type": "string",
                     "description": (
-                        "User-provided gene list TXT with one maize gene ID per line. Example:\n"
-                        "Zm00001d031939\n"
-                        "Zm00001d031940\n"
-                        "Zm00001d031941\n"
-                        "Zm00001d031942"
+                        "User-provided gene list TXT with one gene ID per line. Example for "
+                        "rice:\nLOC_Os02g07880\nLOC_Os01g19750\nLOC_Os05g33910\nLOC_Os07g42632"
+                    ),
+                },
+                "species": {
+                    "type": "string",
+                    "enum": ["maize", "wheat", "rice"],
+                    "default": "maize",
+                    "description": (
+                        "Species for the input genes: maize, wheat, or rice. Default: maize. "
+                        "The matching annotation resources are selected automatically."
                     ),
                 },
                 "background_protein_txt": {
                     "type": "string",
                     "description": (
-                        "Optional custom background protein list TXT, one protein ID per line. "
-                        "Default: use all annotated proteins from the selected annotation source. "
+                        "Optional custom background ID list TXT, one gene/protein ID per line. "
+                        "Default: all IDs annotated by the selected source. Numeric transcript "
+                        "suffixes are normalized for wheat and rice. "
                         "If you want to override it, please provide it explicitly."
                     ),
                 },
                 "annotation_source": {
                     "type": "string",
                     "description": (
-                        "Annotation source/library name used for enrichment from the maize proteins TSV "
-                        "column 4. Default: Pfam. If you want to override it, please provide it explicitly."
+                        "Annotation source/library name used for enrichment from annotation column 4. "
+                        "Default: Pfam. If you want to override it, please provide it explicitly."
                     ),
                 },
                 "min_count_in_candidates": {
@@ -130,7 +150,7 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
                     "minimum": 1,
                     "description": (
                         "Minimum candidate count required for significant-domain reporting. "
-                        "Default: 5. If you want to override it, please provide it explicitly."
+                        "Default: 5 for maize and 2 for wheat/rice."
                     ),
                 },
                 "p_adjust_method": {
@@ -157,7 +177,8 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
                 "output_prefix": {
                     "type": "string",
                     "description": (
-                        "Optional output prefix for enrichment CSV files. Default: pfam_enrichment. "
+                        "Optional output prefix. Default: pfam_enrichment for maize and "
+                        "<species>_pfam_enrichment for wheat/rice. "
                         "If you want to override it, please provide it explicitly."
                     ),
                 },
@@ -168,6 +189,7 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
     async def execute(
         self,
         genelist_txt: str,
+        species: str = "maize",
         background_protein_txt: str | None = None,
         annotation_source: str | None = None,
         min_count_in_candidates: int | None = None,
@@ -180,6 +202,7 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         try:
             prepared = await self.prepare_run(
                 genelist_txt=genelist_txt,
+                species=species,
                 background_protein_txt=background_protein_txt,
                 annotation_source=annotation_source,
                 min_count_in_candidates=min_count_in_candidates,
@@ -196,9 +219,10 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
             details = self._join_output(run_result["stdout"], run_result["stderr"])
             return (
                 "Error: PFAM/domain enrichment failed.\n"
+                f"- Species: {prepared.species}\n"
                 f"- Gene list TXT: {prepared.genelist_txt_path}\n"
-                f"- Maize longest CDS resource: {prepared.longest_cds_txt_path}\n"
-                f"- Maize proteins TSV resource: {prepared.proteins_tsv_path}\n"
+                f"- Longest CDS resource: {prepared.longest_cds_txt_path or 'not required'}\n"
+                f"- Annotation TSV resource: {prepared.proteins_tsv_path}\n"
                 f"- Output dir: {prepared.output_dir}\n"
                 f"Exit code: {run_result['returncode']}\n"
                 f"{details}"
@@ -207,9 +231,10 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         lines = [
             "PFAM/domain enrichment completed.",
             f"- Launcher: {prepared.launcher}",
+            f"- Species: {prepared.species}",
             f"- Gene list TXT: {prepared.genelist_txt_path}",
-            f"- Maize longest CDS resource: {prepared.longest_cds_txt_path}",
-            f"- Maize proteins TSV resource: {prepared.proteins_tsv_path}",
+            f"- Longest CDS resource: {prepared.longest_cds_txt_path or 'not required'}",
+            f"- Annotation TSV resource: {prepared.proteins_tsv_path}",
             f"- Background protein TXT: {prepared.background_protein_txt_path or 'default(all annotated proteins)'}",
             f"- Annotation source: {prepared.annotation_source}",
             f"- Min candidate count: {prepared.min_count_in_candidates}",
@@ -235,6 +260,7 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         self,
         *,
         genelist_txt: str,
+        species: str = "maize",
         background_protein_txt: str | None = None,
         annotation_source: str | None = None,
         min_count_in_candidates: int | None = None,
@@ -243,9 +269,12 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         output_dir: str | None = None,
         output_prefix: str | None = None,
     ) -> PreparedPfamEnrichmentRun:
+        species_value = self._normalize_species(species)
         genelist_txt_path = self._resolve_text_file(genelist_txt, "Gene list TXT")
-        longest_cds_txt_path = self._resolve_longest_cds_resource()
-        proteins_tsv_path = self._resolve_proteins_tsv_resource()
+        longest_cds_txt_path = (
+            self._resolve_longest_cds_resource() if species_value == "maize" else None
+        )
+        proteins_tsv_path = self._resolve_annotation_resource(species_value)
         background_protein_txt_path = (
             self._resolve_text_file(background_protein_txt, "Background protein TXT")
             if background_protein_txt
@@ -253,14 +282,25 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         )
 
         self._validate_non_empty_lines(genelist_txt_path, "Gene list TXT")
-        self._validate_maize_gene_ids(genelist_txt_path)
-        self._validate_tabular_preview(longest_cds_txt_path, min_columns=2, label="Longest CDS TXT")
+        self._validate_gene_ids(genelist_txt_path, species_value)
+        if longest_cds_txt_path is not None:
+            self._validate_tabular_preview(
+                longest_cds_txt_path, min_columns=2, label="Longest CDS TXT"
+            )
         self._validate_tabular_preview(proteins_tsv_path, min_columns=5, label="Protein annotation TSV")
 
         output_root = self._resolve_output_dir(output_dir)
-        output_prefix_value = self._normalize_prefix_name(output_prefix, "pfam_enrichment")
+        default_prefix = (
+            "pfam_enrichment" if species_value == "maize" else f"{species_value}_pfam_enrichment"
+        )
+        output_prefix_value = self._normalize_prefix_name(output_prefix, default_prefix)
         annotation_source_value = (annotation_source or "Pfam").strip() or "Pfam"
-        min_count_value = int(min_count_in_candidates if min_count_in_candidates is not None else 5)
+        default_min_count = 5 if species_value == "maize" else 2
+        min_count_value = int(
+            min_count_in_candidates
+            if min_count_in_candidates is not None
+            else default_min_count
+        )
         if min_count_value < 1:
             raise ValueError("min_count_in_candidates must be >= 1")
         p_adjust_method_value = (p_adjust_method or "BH").strip() or "BH"
@@ -279,6 +319,7 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
 
         for label, path in {
             "pipeline script": self.script_path,
+            "preprocessing script": self.preprocess_script_path,
             "R script": self.r_script_path,
             "summary script": self.summary_script_path,
         }.items():
@@ -299,8 +340,8 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
             str(self.script_path),
             "--genelist-txt",
             str(genelist_txt_path),
-            "--longest-cds-txt",
-            str(longest_cds_txt_path),
+            "--species",
+            species_value,
             "--proteins-tsv",
             str(proteins_tsv_path),
             "--annotation-source",
@@ -323,16 +364,21 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
             str(sig_enrichment_csv_path),
             "--summary-output",
             str(summary_path),
+            "--preprocess-script",
+            str(self.preprocess_script_path),
             "--r-script",
             str(self.r_script_path),
             "--summary-script",
             str(self.summary_script_path),
         ]
+        if longest_cds_txt_path is not None:
+            command.extend(["--longest-cds-txt", str(longest_cds_txt_path)])
         if background_protein_txt_path is not None:
             command.extend(["--background-protein-txt", str(background_protein_txt_path)])
 
         return PreparedPfamEnrichmentRun(
             launcher=env_status["launcher"],
+            species=species_value,
             annotation_source=annotation_source_value,
             min_count_in_candidates=min_count_value,
             p_adjust_method=p_adjust_method_value,
@@ -377,19 +423,27 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
             raise ValueError(f"Maize longest CDS resource must end with .txt: {path}")
         return path
 
-    def _resolve_proteins_tsv_resource(self) -> Path:
-        path = self.proteins_tsv_path
+    def _normalize_species(self, value: str) -> str:
+        species = str(value).strip().lower()
+        if species not in _SPECIES_ANNOTATION_FILENAMES:
+            allowed = ", ".join(_SPECIES_ANNOTATION_FILENAMES)
+            raise ValueError(f"species must be one of: {allowed}")
+        return species
+
+    def _resolve_annotation_resource(self, species: str) -> Path:
+        path = self.annotation_resource_paths[species]
+        filename = _SPECIES_ANNOTATION_FILENAMES[species]
         if not path.exists():
             raise ValueError(
                 "Missing required resource for pfam_enrichment_analysis:\n"
                 f"{path}\n\n"
-                "Please download or prepare all_maize_genes_proteins.fa.tsv and place it at "
+                f"Please download or prepare {filename} and place it at "
                 "the path above. Set EASYGS_RESOURCES_DIR to use a different resource root."
             )
         if not path.is_file():
-            raise ValueError(f"Maize proteins TSV resource must be a file: {path}")
+            raise ValueError(f"Protein annotation TSV resource must be a file: {path}")
         if path.suffix.lower() != ".tsv":
-            raise ValueError(f"Maize proteins TSV resource must end with .tsv: {path}")
+            raise ValueError(f"Protein annotation resource must end with .tsv: {path}")
         return path
 
     def _validate_non_empty_lines(self, path: Path, label: str) -> None:
@@ -401,18 +455,22 @@ class RunPfamEnrichmentTool(PlinkToolBase, Tool):
         if not lines:
             raise ValueError(f"{label} is empty: {path}")
 
-    def _validate_maize_gene_ids(self, path: Path) -> None:
+    def _validate_gene_ids(self, path: Path, species: str) -> None:
         lines = [
             line.strip()
             for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
             if line.strip()
         ]
-        invalid = [value for value in lines if not value.startswith("Zm")]
+        prefixes = {
+            "maize": ("Zm", "GRMZM"),
+            "wheat": ("TraesCS",),
+            "rice": ("LOC_Os", "ChrSy"),
+        }
+        invalid = [value for value in lines if not value.startswith(prefixes[species])]
         if invalid:
             preview = ", ".join(invalid[:3])
             raise ValueError(
-                "This PFAM/domain enrichment tool supports maize only. "
-                f"Found non-maize gene IDs: {preview}"
+                f"Gene IDs do not look like {species} IDs: {preview}"
             )
 
     def _validate_tabular_preview(self, path: Path, min_columns: int, label: str) -> None:

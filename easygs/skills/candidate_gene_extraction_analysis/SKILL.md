@@ -1,106 +1,104 @@
 ---
 name: candidate_gene_extraction_analysis
-description: Extract candidate genes from a user-provided BED file by LD-window expansion and gene-annotation intersection using the built-in candidate_gene_extraction_analysis tool.
+description: Extract candidate genes for maize, wheat, or rice from LD-expanded BED loci using species gene-BED resources.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
 # Candidate Gene Extraction Skill
 
-Run candidate gene extraction using the built-in `candidate_gene_extraction_analysis` tool.
+Use the built-in `candidate_gene_extraction_analysis` tool to extract genes overlapping
+LD-expanded loci for maize, wheat, or rice.
 
-This should be treated as one complete workflow rather than separate user-facing steps, because the analysis depends on one tightly coupled chain:
+Treat this as one complete workflow:
 
-1. validate the user-provided BED loci file
-2. expand each locus interval by the chosen LD distance
-3. validate the user-provided gene annotation BED file
-4. run `bedtools intersect` between expanded loci and gene annotations
-5. export the extended BED file and `genelist.txt`
-6. write a compact summary
+1. validate the user BED and LD distance
+2. select the species gene-BED resource
+3. confirm that chromosome names match the resource
+4. expand each input interval on both sides
+5. intersect expanded intervals with genes
+6. export the expanded BED, sorted unique gene list, detailed matches, and summary
 
-Do not split this into separate public tools for BED expansion, GFF-to-BED conversion, or `bedtools` intersection. Those stay internal inside one complete workflow.
+Do not expose gene-BED resource paths or split expansion and intersection into separate public
+tools.
 
 ## Tool-First Rule
 
 Use `candidate_gene_extraction_analysis(...)` for execution.
 
-## What the Tool Runs
+## Resources
 
-The bundled pipeline:
-
-1. reads the user-provided BED file
-2. expands each interval by the chosen LD distance
-3. uses the user-provided gene annotation BED file
-4. runs `bedtools intersect`
-5. writes `<bed_stem>.extend.bed`
-6. writes `genelist.txt`
-7. writes a compact summary text file
-
-## Required Inputs
-
-- `bed`: user-provided BED file containing loci to expand. Example:
+The tool selects one real resource file from:
 
 ```text
-1	207606062	207606063
-2	180017154	180017155
-2	191156851	191156852
-2	195873477	195873478
+~/.easygs/resources/candidate_gene_extraction_analysis/
+├── allV4gene.bed
+├── allwheatgene.bed
+└── allricegene.bed
 ```
 
-- `gene_bed`: user-provided gene interval BED file with gene IDs in column 4. Example:
+The mapping is:
+
+- `maize` -> `allV4gene.bed`
+- `wheat` -> `allwheatgene.bed`
+- `rice` -> `allricegene.bed`
+
+`EASYGS_RESOURCES_DIR` may override the resource root. The gene BED must have chromosome, start,
+end, and gene ID in columns 1 to 4.
+
+## Required Input
+
+- `bed`: user-provided BED with at least three tab-separated columns. Wheat example:
 
 ```text
-1	44288	49837	Zm00001d027230
-1	50876	55716	Zm00001d027231
-1	92298	95134	Zm00001d027232
-1	111654	118312	Zm00001d027233
+Chr1A	207606062	207606063
+Chr3A	180017154	180017155
+Chr4B	191156851	191156852
 ```
+
+Rice example:
+
+```text
+Chr1	207606062	207606063
+Chr2	180017154	180017155
+Chr3	7214472	7214473
+```
+
+BED coordinates must satisfy `0 <= start < end`. Chromosome labels must occur in the selected
+species resource.
 
 ## Optional Parameters
 
-- `ld_distance`: LD expansion distance in bp. Default: `50000`
-- `output_dir`: root directory for outputs; when omitted, the runtime supplies the default for the current context
+- `species`: `maize`, `wheat`, or `rice`; default: `maize`
+- `ld_distance`: expansion on each side in bp; default: `50000`; use `100000` for the supplied
+  wheat/rice examples
+- `output_dir`: output directory; runtime context supplies the default when omitted
+- `output_prefix`: filename prefix; default: the input BED stem
 
-If the user wants any of these changed, ask them to provide the override explicitly instead of guessing.
+The gene BED is not a public parameter. Ask for `species`, not a reference-file path.
 
-Default output pattern:
+## Outputs
 
-- `<output_dir>/<bed_stem>.extend.bed`
-- `<output_dir>/genelist.txt`
-- `<output_dir>/genelist_summary.txt`
+For `output_prefix=testwheat`:
 
-## Pre-Run Validation
+- `testwheat.extend.bed`: three-column LD-expanded loci
+- `testwheat.txt`: lexically sorted unique candidate gene IDs
+- `testwheat.detailed.tsv`: seven-column locus-to-gene overlap rows
+- `testwheat_summary.txt`: inputs and row counts
 
-Before running analysis, remember that the tool itself always checks whether the required environment exists:
+The detailed rows consist of the three expanded-locus columns followed by the four gene-BED
+columns.
 
-- `EasyGS_2`
+## Runtime and Validation
 
-Behavior rules:
+The workflow runs in `EasyGS_2` and requires `bedtools`, `python3`, `awk`, and `sort`.
 
-- The tool will stop automatically if the `EasyGS_2` environment is missing
-- The tool will stop automatically if `bedtools`, `python3`, or `awk` is not available inside `EasyGS_2`
-- `gene_bed` is mandatory and must be supplied explicitly by the user
-- `gene_bed` must be a BED-like file with at least 4 tab-separated columns and gene IDs in column 4
-- Do not rely on hidden default gene annotation files inside the script
+It stops before execution when:
 
-## Parameter Collection Rules
+- `species` is unsupported
+- the BED or resource is missing or malformed
+- coordinates are invalid
+- input chromosome labels are absent from the selected species resource
+- required environment tools are unavailable
 
-Before calling `candidate_gene_extraction_analysis(...)`, collect the required BED path and gene annotation BED path unless they are already available in the conversation.
-
-Behavior rules:
-
-- When asking for required input files, always provide data examples with 3 to 4 sample rows together with the format description
-- If mentioning optional parameters, always tell the user the default values and remind them to provide overrides explicitly
-- The loci input must be `.bed`
-- The gene annotation BED input must also be provided explicitly by the user
-- Do not invent file paths
-- The BED input is user-provided and must never be hardcoded
-- All required files must be explicitly supplied by the user and must not be hidden in the script
-
-## Result Interpretation
-
-After a successful run, the summary should highlight:
-
-- the expanded BED output path
-- the `genelist.txt` path
-- the LD distance used
-- the total and unique candidate-gene counts when inferable
+After a successful run, report all four output paths, the LD distance, species, detailed overlap
+count, and unique candidate-gene count.

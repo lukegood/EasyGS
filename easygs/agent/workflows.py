@@ -17,6 +17,7 @@ from easygs.agent.tools.cvf_split import RunCvfSplitTool
 from easygs.agent.tools.env_factor_correlation import RunEnvFactorCorrelationTool
 from easygs.agent.tools.env_region_correlation import RunEnvRegionCorrelationTool
 from easygs.agent.tools.environment_index import RunEnvironmentIndexTool
+from easygs.agent.tools.fastq_to_vcf import RunFastqToVcfTool
 from easygs.agent.tools.gebv import RunGebvTool
 from easygs.agent.tools.gene_environment_interaction import RunGeneEnvironmentInteractionTool
 from easygs.agent.tools.gene_function_annotation import RunGeneFunctionAnnotationTool
@@ -55,6 +56,9 @@ from easygs.agent.tools.vcf_genomic_prediction_csv import RunVcfGenomicPredictio
 from easygs.agent.tools.vcf_stats import RunVcfStatsTool
 from easygs.agent.tools.vcf_variant_extract import RunVcfVariantExtractTool
 from easygs.agent.tools.vcftools import RunVcftoolsTool
+from easygs.agent.tools.wheat_rice_gene_function_enrichment import (
+    RunWheatRiceGeneFunctionEnrichmentTool,
+)
 from easygs.agent.tools.workflow import WorkflowDefinition
 
 
@@ -143,6 +147,10 @@ def build_analysis_workflows(
         workspace=workspace,
         restrict_to_workspace=restrict_to_workspace,
     )
+    fastq_to_vcf = RunFastqToVcfTool(
+        workspace=workspace,
+        restrict_to_workspace=restrict_to_workspace,
+    )
     env_region_correlation = RunEnvRegionCorrelationTool(
         workspace=workspace,
         restrict_to_workspace=restrict_to_workspace,
@@ -152,6 +160,10 @@ def build_analysis_workflows(
         restrict_to_workspace=restrict_to_workspace,
     )
     gene_function_annotation = RunGeneFunctionAnnotationTool(
+        workspace=workspace,
+        restrict_to_workspace=restrict_to_workspace,
+    )
+    wheat_rice_gene_function_enrichment = RunWheatRiceGeneFunctionEnrichmentTool(
         workspace=workspace,
         restrict_to_workspace=restrict_to_workspace,
     )
@@ -355,6 +367,18 @@ def build_analysis_workflows(
         ),
         RegisteredWorkflow(
             definition=WorkflowDefinition(
+                kind="fastq_to_vcf",
+                tool_name="fastq_to_vcf_analysis",
+                description=(
+                    "Run the maize B73 v4 paired-end FASTQ-to-VCF pipeline for any number "
+                    "of matched *_1.fq.gz and *_2.fq.gz sample pairs."
+                ),
+                run_tool=fastq_to_vcf,
+                prepare_background_kwargs=_with_action_output_dir,
+            ),
+        ),
+        RegisteredWorkflow(
+            definition=WorkflowDefinition(
                 kind="region_r2",
                 tool_name="region_r2_analysis",
                 description=(
@@ -431,8 +455,9 @@ def build_analysis_workflows(
                 kind="peak_annotation",
                 tool_name="peak_annotation_analysis",
                 description=(
-                    "Run ChIPseeker-based locus structural annotation from a GFF3/GFF file and "
-                    "a BED file, then export annotation TSV and PNG outputs."
+                    "Run ChIPseeker-based locus structural annotation for maize, wheat, or rice "
+                    "from a BED file and the matching EasyGS GFF3 resource, then export "
+                    "annotation TSV and PNG outputs."
                 ),
                 run_tool=peak_annotation,
                 prepare_background_kwargs=_with_action_output_dir,
@@ -588,8 +613,9 @@ def build_analysis_workflows(
                 kind="candidate_gene_extraction",
                 tool_name="candidate_gene_extraction_analysis",
                 description=(
-                    "Extract candidate genes from a user-provided BED file by expanding loci "
-                    "with an LD distance and intersecting them with gene annotations."
+                    "Extract candidate genes for maize, wheat, or rice from a user-provided BED "
+                    "by LD-window expansion and intersection with the matching EasyGS gene-BED "
+                    "resource."
                 ),
                 run_tool=candidate_gene_extraction,
                 prepare_background_kwargs=_with_action_output_dir,
@@ -600,10 +626,9 @@ def build_analysis_workflows(
                 kind="pfam_enrichment",
                 tool_name="pfam_enrichment_analysis",
                 description=(
-                    "Extract candidate proteins from a gene list using built-in maize longest-CDS "
-                    "mapping and built-in maize protein-annotation TSV, then "
-                    "run PFAM/domain enrichment "
-                    "(maize-only)."
+                    "Run PFAM/domain enrichment for maize, wheat, or rice using species-specific "
+                    "EasyGS annotation resources, transcript-ID normalization, and configurable "
+                    "count, p-adjustment, and FDR thresholds."
                 ),
                 run_tool=pfam_enrichment,
                 prepare_background_kwargs=_with_action_output_dir,
@@ -626,8 +651,8 @@ def build_analysis_workflows(
                 kind="ortholog_extraction",
                 tool_name="ortholog_extraction_analysis",
                 description=(
-                    "Extract ortholog rows from a user-provided gene list TXT and maize "
-                    "ortholog matrix TSV into a matched .ortholog.tsv file."
+                    "Extract maize, wheat, or rice ortholog rows from a gene list by exact "
+                    "first-column matching against the species-specific EasyGS matrix resource."
                 ),
                 run_tool=ortholog_extraction,
                 prepare_background_kwargs=_with_action_output_dir,
@@ -642,6 +667,18 @@ def build_analysis_workflows(
                     "gene-to-ENTREZ CSV using AnnotationHub resources."
                 ),
                 run_tool=gene_function_annotation,
+                prepare_background_kwargs=_with_action_output_dir,
+            ),
+        ),
+        RegisteredWorkflow(
+            definition=WorkflowDefinition(
+                kind="wheat_rice_gene_function_enrichment",
+                tool_name="wheat_rice_gene_function_enrichment_analysis",
+                description=(
+                    "Run offline GO and/or KEGG enrichment for wheat or rice from a "
+                    "user-provided gene list using species-specific EasyGS resources."
+                ),
+                run_tool=wheat_rice_gene_function_enrichment,
                 prepare_background_kwargs=_with_action_output_dir,
             ),
         ),

@@ -123,8 +123,6 @@ for d in "$bed_dir" "$grm_dir" "$result_dir"; do
 done
 
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/easygs-heritability.XXXXXX")
-id_sort="${tmp_dir}/id_sort.txt"
-pheno="${tmp_dir}/pheno.txt"
 pheno_sort="${tmp_dir}/pheno_sort.txt"
 vcf_prefix="${tmp_dir}/${prefix}"
 
@@ -155,44 +153,55 @@ fi
 #利用bed、bim、fam文件构建grm矩阵
 gcta64 --bfile "${bed_dir}/${prefix}" --make-grm-bin --out "${grm_dir}/${prefix}"
 
-if [ -n "$line_list" ]; then
-  awk 'NR==FNR {keep[$1]=1; next} FNR==1 {print; next} ($1 in keep) {print}' "$line_list" "$pheno_file" > "$pheno"
-else
-  cp "$pheno_file" "$pheno"
-fi
-
-#依据grm亲缘关系矩阵文件中的grm.id文件中材料顺序对表型文件排序
-awk '{print $1}' "${grm_dir}/${prefix}.grm.id" > "$id_sort"
+#依据 grm.id 中的 FID+IID 顺序对表型排序。
+#GCTA 的 --pheno 输入不保留标题行。
 awk '
   NR==FNR {
-    if (FNR == 1) {
-      header = $0
-      next
-    }
-    rows[$1] = $0
+    if (FNR == 1) next
+    rows[$1 SUBSEP $2] = $0
     next
   }
-  ($1 in rows) {
-    ordered[++count] = rows[$1]
+  (($1 SUBSEP $2) in rows) {
+    print rows[$1 SUBSEP $2]
   }
-  END {
-    if (header == "") {
-      exit 1
-    }
-    print header
-    for (i = 1; i <= count; i++) {
-      print ordered[i]
-    }
-  }
-' "$pheno" "$id_sort" > "$pheno_sort"
+' "$pheno_file" "${grm_dir}/${prefix}.grm.id" > "$pheno_sort"
 
-if [ "$(wc -l < "$pheno_sort")" -le 1 ]; then
-  echo "No phenotype rows remained after matching and sorting sample IDs." >&2
+phenotype_count=$(awk 'NR > 1 && NF > 0 {count++} END {print count + 0}' "$pheno_file")
+grm_count=$(awk 'NF > 0 {count++} END {print count + 0}' "${grm_dir}/${prefix}.grm.id")
+matched_count=$(awk 'NF > 0 {count++} END {print count + 0}' "$pheno_sort")
+
+echo "Heritability sample alignment: phenotype=${phenotype_count}, GRM=${grm_count}, common=${matched_count}"
+
+if [ "$matched_count" -eq 0 ]; then
+  echo "No samples are shared by the phenotype file and GRM when matching exact FID/IID pairs." >&2
+  echo "Sample alignment: phenotype=${phenotype_count}, GRM=${grm_count}, common=${matched_count}" >&2
   exit 1
 fi
 
 #计算遗传力
-gcta64 --reml --pheno "$pheno_sort" --grm "${grm_dir}/${prefix}" --out "${result_dir}/${prefix}"
+result_prefix="${result_dir}/${prefix}"
+result_hsq="${result_prefix}.hsq"
+result_log="${result_prefix}.log"
+rm -f "$result_hsq" "$result_log"
+
+if ! gcta64 --reml --pheno "$pheno_sort" --grm "${grm_dir}/${prefix}" --out "$result_prefix"; then
+  echo "GCTA REML failed after sample alignment: phenotype=${phenotype_count}, GRM=${grm_count}, common=${matched_count}." >&2
+  if [ -f "$result_log" ]; then
+    echo "GCTA result log tail:" >&2
+    tail -n 40 "$result_log" >&2
+  fi
+  exit 1
+fi
+
+if [ ! -s "$result_hsq" ] || ! awk '$1 == "V(G)/Vp" && NF >= 3 {found=1} END {exit !found}' "$result_hsq"; then
+  echo "GCTA REML exited without a valid heritability result: ${result_hsq}" >&2
+  echo "Sample alignment: phenotype=${phenotype_count}, GRM=${grm_count}, common=${matched_count}" >&2
+  if [ -f "$result_log" ]; then
+    echo "GCTA result log tail:" >&2
+    tail -n 40 "$result_log" >&2
+  fi
+  exit 1
+fi
 
 echo "Heritability analysis completed."
 echo "Results saved to: ${result_dir}"

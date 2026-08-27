@@ -21,6 +21,7 @@ parse_args <- function() {
   }
   required <- c(
     "protlist-txt",
+    "species",
     "source-annotation-tsv",
     "annotation-source",
     "min-count-in-candidates",
@@ -52,6 +53,56 @@ empty_result_df <- function() {
   )
 }
 
+normalize_gene_ids <- function(values) {
+  sub("\\.[0-9]+$", "", trim_scalar(values))
+}
+
+format_result_df <- function(frame) {
+  if (species == "maize") {
+    return(frame)
+  }
+  data.frame(
+    pfam = frame$pfam,
+    K = frame$K,
+    k = frame$k,
+    p_hyper = frame$p_hyper,
+    p_fisher = frame$p_fisher,
+    FoldEnrichment = frame$FoldEnrich,
+    p_adj = frame$p_adj,
+    negLog10P = frame$negLog10p,
+    negLog10FDR = frame$negLog10p_adj,
+    stringsAsFactors = FALSE
+  )
+}
+
+write_result_files <- function(all_frame, sig_frame) {
+  formatted_all <- format_result_df(all_frame)
+  formatted_sig <- format_result_df(sig_frame)
+  if (species == "maize") {
+    utils::write.csv(formatted_all, all_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+    utils::write.csv(formatted_sig, sig_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+  } else {
+    old_options <- options(digits = 17)
+    on.exit(options(old_options), add = TRUE)
+    utils::write.table(
+      formatted_all,
+      all_enrichment_csv_output,
+      sep = ",",
+      row.names = FALSE,
+      col.names = TRUE,
+      quote = FALSE
+    )
+    utils::write.table(
+      formatted_sig,
+      sig_enrichment_csv_output,
+      sep = ",",
+      row.names = FALSE,
+      col.names = TRUE,
+      quote = FALSE
+    )
+  }
+}
+
 safe_fisher_p <- function(k, n, K, M) {
   matrix_values <- matrix(c(k, n - k, K - k, M - K - (n - k)), nrow = 2)
   if (any(matrix_values < 0)) {
@@ -62,6 +113,7 @@ safe_fisher_p <- function(k, n, K, M) {
 
 args <- parse_args()
 protlist_txt <- args[["protlist-txt"]]
+species <- trim_scalar(args[["species"]])
 source_annotation_tsv <- args[["source-annotation-tsv"]]
 background_protein_txt <- if (!is.null(args[["background-protein-txt"]])) args[["background-protein-txt"]] else ""
 annotation_source <- trim_scalar(args[["annotation-source"]])
@@ -70,6 +122,10 @@ p_adjust_method <- trim_scalar(args[["p-adjust-method"]])
 fdr_cutoff <- as.numeric(args[["fdr-cutoff"]])
 all_enrichment_csv_output <- args[["all-enrichment-csv-output"]]
 sig_enrichment_csv_output <- args[["sig-enrichment-csv-output"]]
+
+if (!(species %in% c("maize", "wheat", "rice"))) {
+  stop("species must be one of: maize, wheat, rice.", call. = FALSE)
+}
 
 if (annotation_source == "") {
   stop("annotation-source must not be empty.", call. = FALSE)
@@ -84,14 +140,13 @@ if (is.na(fdr_cutoff) || fdr_cutoff < 0 || fdr_cutoff > 1) {
 dir.create(dirname(all_enrichment_csv_output), recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(sig_enrichment_csv_output), recursive = TRUE, showWarnings = FALSE)
 
-candidate_proteins <- trim_scalar(readLines(protlist_txt, warn = FALSE, encoding = "UTF-8"))
+candidate_proteins <- normalize_gene_ids(readLines(protlist_txt, warn = FALSE, encoding = "UTF-8"))
 candidate_proteins <- unique(candidate_proteins[nzchar(candidate_proteins)])
 
 if (!length(candidate_proteins)) {
   all_df <- empty_result_df()
   sig_df <- empty_result_df()
-  utils::write.csv(all_df, all_enrichment_csv_output, row.names = FALSE, quote = TRUE)
-  utils::write.csv(sig_df, sig_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+  write_result_files(all_df, sig_df)
   cat("No candidate proteins found in protlist.txt.\n")
   quit(save = "no", status = 0)
 }
@@ -111,7 +166,7 @@ if (ncol(ip) < 5L) {
   stop("source-annotation-tsv must contain at least 5 tab-separated columns.", call. = FALSE)
 }
 
-protein_ids <- trim_scalar(ip[[1L]])
+protein_ids <- normalize_gene_ids(ip[[1L]])
 pfam_values <- trim_scalar(ip[[5L]])
 
 keep <- nzchar(protein_ids) & nzchar(pfam_values) & pfam_values != "-"
@@ -124,7 +179,7 @@ protein_pfam <- data.frame(
 protein_pfam <- unique(protein_pfam)
 
 if (nzchar(background_protein_txt)) {
-  background <- trim_scalar(readLines(background_protein_txt, warn = FALSE, encoding = "UTF-8"))
+  background <- normalize_gene_ids(readLines(background_protein_txt, warn = FALSE, encoding = "UTF-8"))
   background <- unique(background[nzchar(background)])
 } else {
   background <- unique(protein_pfam$gene)
@@ -138,8 +193,7 @@ n <- length(unique(cands_in_bg))
 if (M == 0L || n == 0L || nrow(protein_pfam_bg) == 0L) {
   all_df <- empty_result_df()
   sig_df <- empty_result_df()
-  utils::write.csv(all_df, all_enrichment_csv_output, row.names = FALSE, quote = TRUE)
-  utils::write.csv(sig_df, sig_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+  write_result_files(all_df, sig_df)
   cat(sprintf("No analyzable proteins after filtering. Background=%d, candidates=%d.\n", M, n))
   quit(save = "no", status = 0)
 }
@@ -163,8 +217,7 @@ pfam_stats <- pfam_stats[pfam_stats$k >= 1L, , drop = FALSE]
 if (!nrow(pfam_stats)) {
   all_df <- empty_result_df()
   sig_df <- empty_result_df()
-  utils::write.csv(all_df, all_enrichment_csv_output, row.names = FALSE, quote = TRUE)
-  utils::write.csv(sig_df, sig_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+  write_result_files(all_df, sig_df)
   cat("No domains were observed in candidate proteins.\n")
   quit(save = "no", status = 0)
 }
@@ -176,12 +229,19 @@ pfam_stats$p <- pfam_stats$p_hyper
 pfam_stats$p_adj <- stats::p.adjust(pfam_stats$p, method = p_adjust_method)
 pfam_stats$negLog10p <- -log10(pfam_stats$p)
 pfam_stats$negLog10p_adj <- -log10(pfam_stats$p_adj)
-pfam_stats <- pfam_stats[order(pfam_stats$p_adj, pfam_stats$p, decreasing = FALSE), , drop = FALSE]
+if (species == "maize") {
+  pfam_stats <- pfam_stats[
+    order(pfam_stats$p_adj, pfam_stats$p, decreasing = FALSE),
+    ,
+    drop = FALSE
+  ]
+} else {
+  pfam_stats <- pfam_stats[order(pfam_stats$p_adj, decreasing = FALSE), , drop = FALSE]
+}
 
 sig <- pfam_stats[pfam_stats$p_adj <= fdr_cutoff & pfam_stats$k >= min_count_in_candidates, , drop = FALSE]
 
-utils::write.csv(pfam_stats, all_enrichment_csv_output, row.names = FALSE, quote = TRUE)
-utils::write.csv(sig, sig_enrichment_csv_output, row.names = FALSE, quote = TRUE)
+write_result_files(pfam_stats, sig)
 
 cat(sprintf("Background proteins (M) = %d\n", M))
 cat(sprintf("Candidates in background (n) = %d\n", n))

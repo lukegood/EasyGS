@@ -7,6 +7,7 @@ usage() {
 Usage:
   peak_annotation.sh \
     --gff3 <annotation.gff3> \
+    --species <maize|wheat|rice> \
     --bed <locilist.bed> \
     --output-tsv <locilist.peakanno.tsv> \
     --output-png <locilist.peakanno.png> \
@@ -34,6 +35,7 @@ EOF
 }
 
 gff3=""
+species=""
 bed=""
 output_tsv=""
 output_png=""
@@ -46,6 +48,7 @@ summary_script=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --gff3) gff3="$2"; shift 2 ;;
+    --species) species="$2"; shift 2 ;;
     --bed) bed="$2"; shift 2 ;;
     --output-tsv) output_tsv="$2"; shift 2 ;;
     --output-png) output_png="$2"; shift 2 ;;
@@ -61,6 +64,7 @@ done
 
 for required in \
   "$gff3" \
+  "$species" \
   "$bed" \
   "$output_tsv" \
   "$output_png" \
@@ -113,6 +117,7 @@ Rscript "$r_script" \
 
 python3 "$summary_script" \
   --gff3 "$gff3" \
+  --species "$species" \
   --bed "$bed" \
   --output-tsv "$output_tsv" \
   --output-png "$output_png" \

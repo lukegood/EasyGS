@@ -64,8 +64,12 @@ The `heritability_analysis` tool wraps the bundled pipeline in `{baseDir}/script
 2. Optional VCF sample extraction when `keep` is provided
 3. PLINK BED conversion
 4. GCTA GRM construction
-5. Phenotype reordering to match GRM sample order
+5. Exact `FID` + `IID` phenotype matching and reordering to match GRM sample order
 6. GCTA REML heritability estimation
+
+Before REML, the pipeline reports the phenotype row count, GRM sample count, and exact
+FID/IID intersection count. The header is removed from the temporary GCTA phenotype input.
+A run is successful only when GCTA produces a non-empty `.hsq` file containing `V(G)/Vp`.
 
 The tool also supports:
 

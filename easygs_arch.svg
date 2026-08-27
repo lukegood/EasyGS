@@ -1,0 +1,361 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+  <title id="title">EasyGS Architecture</title>
+  <desc id="desc">Architecture diagram of EasyGS showing channels, message bus, agent loop, context, tool and skill integration, and background jobs.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#f6f7fb"/>
+    </linearGradient>
+    <linearGradient id="bluePanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecf6ff"/>
+      <stop offset="100%" stop-color="#dfefff"/>
+    </linearGradient>
+    <linearGradient id="yellowPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff9d9"/>
+      <stop offset="100%" stop-color="#ffeeb8"/>
+    </linearGradient>
+    <linearGradient id="orangePanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff2e3"/>
+      <stop offset="100%" stop-color="#ffe1c6"/>
+    </linearGradient>
+    <linearGradient id="purplePanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5ebff"/>
+      <stop offset="100%" stop-color="#ead9ff"/>
+    </linearGradient>
+    <linearGradient id="greenPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e9fff1"/>
+      <stop offset="100%" stop-color="#d4f5df"/>
+    </linearGradient>
+    <linearGradient id="redPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff0ef"/>
+      <stop offset="100%" stop-color="#ffd9d6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#556070" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#627086"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1120" fill="url(#bg)"/>
+
+  <text x="900" y="54" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1f2a44">
+    EasyGS Architecture
+  </text>
+  <text x="900" y="84" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#5d6b82">
+    Channel-driven agent for genomic analysis with unified skill-tool workflows and persistent background jobs
+  </text>
+
+  <!-- Channels -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="150" rx="26" ry="26" width="270" height="720" fill="url(#bluePanel)" stroke="#91bceb" stroke-width="4"/>
+  </g>
+  <text x="175" y="198" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1f2a44">
+    Channels
+  </text>
+  <text x="175" y="226" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#51627b">
+    user-facing entry points
+  </text>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#1f2a44">
+    <circle cx="110" cy="300" r="34" fill="#a7e5ff"/>
+    <text x="110" y="307" text-anchor="middle" font-size="26" font-weight="700">F</text>
+    <text x="175" y="307" font-size="24">Feishu</text>
+
+    <circle cx="110" cy="390" r="34" fill="#a8f1d2"/>
+    <text x="110" y="397" text-anchor="middle" font-size="26" font-weight="700">T</text>
+    <text x="175" y="397" font-size="24">Telegram</text>
+
+    <circle cx="110" cy="480" r="34" fill="#cbe1ff"/>
+    <text x="110" y="487" text-anchor="middle" font-size="26" font-weight="700">S</text>
+    <text x="175" y="487" font-size="24">Slack / Discord</text>
+
+    <circle cx="110" cy="570" r="34" fill="#ffd7b8"/>
+    <text x="110" y="577" text-anchor="middle" font-size="24" font-weight="700">E</text>
+    <text x="175" y="577" font-size="24">Email / QQ</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="70" y="675" rx="18" ry="18" width="210" height="130" fill="#ffffff" stroke="#9fc1ea" stroke-width="3"/>
+  </g>
+  <text x="175" y="718" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#24415f">
+    ChannelManager
+  </text>
+  <text x="175" y="747" text-anchor="middle" font-family="Courier New, monospace" font-size="14" fill="#536780">
+    easygs/channels/*
+  </text>
+  <text x="175" y="774" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#536780">
+    start/stop channels and dispatch outbound replies
+  </text>
+
+  <!-- Message bus -->
+  <g filter="url(#shadow)">
+    <rect x="360" y="250" rx="24" ry="24" width="270" height="180" fill="url(#yellowPanel)" stroke="#f0cf62" stroke-width="4"/>
+  </g>
+  <text x="495" y="304" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#48380a">
+    Message Bus
+  </text>
+  <text x="495" y="335" text-anchor="middle" font-family="Courier New, monospace" font-size="14" fill="#6f5d1d">
+    easygs/bus/events.py
+  </text>
+  <text x="495" y="365" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#6f5d1d">
+    InboundMessage / OutboundMessage
+  </text>
+  <text x="495" y="392" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#6f5d1d">
+    async queues for user requests and notifications
+  </text>
+
+  <!-- Agent core -->
+  <g filter="url(#shadow)">
+    <rect x="680" y="120" rx="28" ry="28" width="670" height="500" fill="url(#orangePanel)" stroke="#efb077" stroke-width="4"/>
+  </g>
+  <text x="1015" y="168" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#5d3711">
+    Agent Core
+  </text>
+  <text x="1015" y="198" text-anchor="middle" font-family="Courier New, monospace" font-size="14" fill="#8a5a2e">
+    easygs/agent/loop.py
+  </text>
+
+  <g filter="url(#shadow)">
+    <rect x="875" y="230" rx="20" ry="20" width="280" height="92" fill="#fff5ec" stroke="#f0b27a" stroke-width="3"/>
+  </g>
+  <text x="1015" y="268" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#6a3e14">
+    AgentLoop
+  </text>
+  <text x="1015" y="295" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#7d5f3f">
+    builds messages, calls the LLM, executes tools
+  </text>
+
+  <!-- Context -->
+  <g filter="url(#shadow)">
+    <rect x="720" y="355" rx="22" ry="22" width="255" height="220" fill="url(#purplePanel)" stroke="#ba95ea" stroke-width="4"/>
+  </g>
+  <text x="848" y="394" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#4d2877">
+    ContextBuilder
+  </text>
+  <text x="848" y="421" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#6a4f92">
+    agent/context.py
+  </text>
+
+  <g filter="url(#shadow)">
+    <rect x="740" y="445" rx="14" ry="14" width="95" height="95" fill="#efe2ff" stroke="#c49cf3" stroke-width="2.5"/>
+    <rect x="850" y="445" rx="14" ry="14" width="105" height="95" fill="#efe2ff" stroke="#c49cf3" stroke-width="2.5"/>
+  </g>
+  <text x="788" y="482" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#4d2877">Session</text>
+  <text x="788" y="506" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#6a4f92">history</text>
+  <text x="902" y="482" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#4d2877">Memory</text>
+  <text x="902" y="506" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#6a4f92">MEMORY.md</text>
+  <text x="848" y="560" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#5f3e8f">
+    bootstrap files + skill summaries
+  </text>
+
+  <!-- LLM -->
+  <g filter="url(#shadow)">
+    <rect x="1000" y="355" rx="22" ry="22" width="160" height="220" fill="#fff6d7" stroke="#efcf71" stroke-width="4"/>
+  </g>
+  <text x="1080" y="400" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#5e4707">
+    LLM
+  </text>
+  <text x="1080" y="428" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#78611b">
+    providers/*
+  </text>
+  <text x="1080" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#78611b">
+    LiteLLM provider
+  </text>
+  <text x="1080" y="486" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#78611b">
+    OpenAI / Anthropic / gateways
+  </text>
+
+  <!-- Tool registry -->
+  <g filter="url(#shadow)">
+    <rect x="1185" y="355" rx="22" ry="22" width="135" height="220" fill="#ffe9db" stroke="#f0ad76" stroke-width="4"/>
+  </g>
+  <text x="1252" y="394" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#6a3c16">
+    Tools
+  </text>
+  <text x="1252" y="422" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#815735">
+    registry.py
+  </text>
+  <text x="1252" y="456" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#815735">
+    read_file
+  </text>
+  <text x="1252" y="480" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#815735">
+    preview_tabular
+  </text>
+  <text x="1252" y="504" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#815735">
+    exec / web / spawn
+  </text>
+  <text x="1252" y="528" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#815735">
+    jobs / workflows
+  </text>
+
+  <!-- Workflow runtime -->
+  <g filter="url(#shadow)">
+    <rect x="1395" y="120" rx="28" ry="28" width="355" height="650" fill="url(#greenPanel)" stroke="#7bb58f" stroke-width="4"/>
+  </g>
+  <text x="1573" y="168" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="700" fill="#214b2c">
+    Workflow Runtime
+  </text>
+  <text x="1573" y="196" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#3b6750">
+    skill + tool integrated analysis layer
+  </text>
+
+  <g filter="url(#shadow)">
+    <rect x="1435" y="225" rx="18" ry="18" width="275" height="92" fill="#ffffff" stroke="#8bbe97" stroke-width="3"/>
+    <rect x="1435" y="345" rx="18" ry="18" width="275" height="112" fill="#ffffff" stroke="#8bbe97" stroke-width="3"/>
+    <rect x="1435" y="485" rx="18" ry="18" width="275" height="170" fill="#f6fffa" stroke="#8bbe97" stroke-width="3"/>
+  </g>
+  <text x="1573" y="262" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#25523a">
+    WorkflowAnalysisTool
+  </text>
+  <text x="1573" y="289" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    public *_analysis tools registered from
+  </text>
+  <text x="1573" y="308" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#446e57">
+    agent/workflows.py
+  </text>
+
+  <text x="1573" y="383" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#25523a">
+    RunXxxTool
+  </text>
+  <text x="1573" y="410" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    validate inputs, resolve outputs,
+  </text>
+  <text x="1573" y="430" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    pick env, and prepare command / metadata
+  </text>
+
+  <text x="1573" y="524" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#25523a">
+    Skill Package
+  </text>
+  <text x="1573" y="552" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#446e57">
+    easygs/skills/&lt;analysis_name&gt;/
+  </text>
+  <text x="1573" y="582" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    SKILL.md  +  wrapper.sh
+  </text>
+  <text x="1573" y="606" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    run_*.R / run_*.py / summarize_*.py
+  </text>
+  <text x="1573" y="630" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#446e57">
+    scientific envs: EasyGS_1 / 2 / 3 / 4
+  </text>
+  <text x="1573" y="655" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#5a7d67">
+    same skill directory is used by prompt-time guidance
+  </text>
+  <text x="1573" y="674" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#5a7d67">
+    and runtime execution artifacts
+  </text>
+
+  <!-- Job service -->
+  <g filter="url(#shadow)">
+    <rect x="360" y="690" rx="28" ry="28" width="1390" height="360" fill="url(#redPanel)" stroke="#e59c97" stroke-width="4"/>
+  </g>
+  <text x="1055" y="736" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#6b2221">
+    Background Job Service
+  </text>
+  <text x="1055" y="765" text-anchor="middle" font-family="Courier New, monospace" font-size="14" fill="#8a4b4a">
+    easygs/jobs/service.py
+  </text>
+
+  <g filter="url(#shadow)">
+    <rect x="405" y="812" rx="18" ry="18" width="270" height="175" fill="#fff8f7" stroke="#e7a09a" stroke-width="3"/>
+    <rect x="716" y="812" rx="18" ry="18" width="285" height="175" fill="#fff8f7" stroke="#e7a09a" stroke-width="3"/>
+    <rect x="1043" y="812" rx="18" ry="18" width="300" height="175" fill="#fff8f7" stroke="#e7a09a" stroke-width="3"/>
+    <rect x="1386" y="812" rx="18" ry="18" width="320" height="175" fill="#fff8f7" stroke="#e7a09a" stroke-width="3"/>
+  </g>
+
+  <text x="540" y="851" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#6b2221">
+    submit_job()
+  </text>
+  <text x="540" y="879" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    allocate job id and job dir
+  </text>
+  <text x="540" y="904" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    queue immediate outbound notice
+  </text>
+  <text x="540" y="929" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#8a4b4a">
+    get_job_status / get_job_result
+  </text>
+
+  <text x="859" y="851" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#6b2221">
+    Persistent State
+  </text>
+  <text x="859" y="879" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#8a4b4a">
+    ~/.easygs/jobs/jobs.json
+  </text>
+  <text x="859" y="903" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    job metadata, status, timestamps
+  </text>
+  <text x="859" y="928" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    per-job stdout.log / stderr.log
+  </text>
+
+  <text x="1193" y="851" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#6b2221">
+    Async Process Runner
+  </text>
+  <text x="1193" y="879" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    asyncio.create_subprocess_exec
+  </text>
+  <text x="1193" y="904" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    bash / Rscript / python / plink / gcta
+  </text>
+  <text x="1193" y="929" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    writes analysis artifacts in the job dir
+  </text>
+
+  <text x="1546" y="851" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#6b2221">
+    Result Handling
+  </text>
+  <text x="1546" y="879" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="#8a4b4a">
+    jobs/&lt;kind&gt;.py handlers
+  </text>
+  <text x="1546" y="903" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    finalize_success() / format_result()
+  </text>
+  <text x="1546" y="928" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    completion inbound message from job-runner
+  </text>
+  <text x="1546" y="953" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8a4b4a">
+    agent summarizes and notifies the user
+  </text>
+
+  <!-- Labels -->
+  <text x="414" y="1013" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9a5b56">
+    Background jobs are triggered automatically for channel-originated workflow tools.
+  </text>
+  <text x="414" y="1035" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9a5b56">
+    CLI can still run some analyses in foreground depending on runtime policy.
+  </text>
+
+  <!-- Arrows -->
+  <path d="M310 340 L345 340" stroke="#79aee8" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M630 340 L855 275" stroke="#dfc250" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1015 322 L1015 346" stroke="#d2a06f" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M975 466 L1000 466" stroke="#8f7bc4" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1160 466 L1185 466" stroke="#d2a06f" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1185 560 C1130 606 1045 630 925 620" stroke="#d6b15d" stroke-width="4" fill="none" marker-end="url(#arrow)" stroke-dasharray="10 8"/>
+  <path d="M1320 466 L1425 466" stroke="#f09f67" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1573 318 L1573 338" stroke="#6ea682" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1573 457 L1573 478" stroke="#6ea682" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M815 573 C880 610 1180 620 1435 585" stroke="#9b83d0" stroke-width="4" fill="none" marker-end="url(#arrow)" stroke-dasharray="12 8"/>
+
+  <path d="M1540 655 L1540 690" stroke="#7da48d" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M675 899 L716 899" stroke="#cc817b" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1001 899 L1043 899" stroke="#cc817b" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1343 899 L1386 899" stroke="#cc817b" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+
+  <path d="M480 812 C420 700 415 520 470 430" stroke="#9bb4d8" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1580 812 C1658 740 1705 605 1705 430" stroke="#c78f8a" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1705 430 C1705 305 1690 280 633 280" stroke="#c78f8a" stroke-width="4" fill="none" marker-end="url(#arrow)" stroke-dasharray="10 8"/>
+  <path d="M630 390 C660 390 680 390 720 390" stroke="#8f7bc4" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Mini legend -->
+  <g filter="url(#shadow)">
+    <rect x="1470" y="44" rx="14" ry="14" width="286" height="54" fill="#ffffff" stroke="#d5dce7" stroke-width="2"/>
+  </g>
+  <line x1="1492" y1="67" x2="1530" y2="67" stroke="#627086" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="1542" y="72" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4f5a6d">control / data flow</text>
+  <line x1="1660" y1="67" x2="1698" y2="67" stroke="#627086" stroke-width="4" stroke-dasharray="10 7" marker-end="url(#arrow)"/>
+  <text x="1709" y="72" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4f5a6d">prompt / notification linkage</text>
+</svg>
