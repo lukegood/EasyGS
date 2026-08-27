@@ -65,10 +65,10 @@ docker run --rm -it \
   --network host \
   -v "$PWD/easygs-home:/home/easygs/.easygs" \
   -v /path/to/data:/data \
-  -e EASYGS_AGENTS__DEFAULTS__MODEL=anthropic/claude-opus-4-5 \
+  -e EASYGS_AGENTS__DEFAULTS__MODEL=deepseek-v4-pro \
   -e EASYGS_AGENTS__DEFAULTS__MAX_TOKENS=8192 \
   -e EASYGS_AGENTS__DEFAULTS__REASONING_EFFORT=max \
-  -e EASYGS_PROVIDERS__ANTHROPIC__API_KEY=sk-xxx \
+  -e EASYGS_PROVIDERS__DEEPSEEK__API_KEY=sk-xxx \
   easygs:analysis
 ```
 
