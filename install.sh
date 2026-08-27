@@ -445,11 +445,11 @@ EOF
     read_tty "Provider" "1"
     choice="$REPLY"
     case "$choice" in
-      1) provider="DEEPSEEK"; default_model="deepseek/deepseek-v4-pro"; break ;;
-      2) provider="ZHIPU"; default_model="zai/glm-4"; break ;;
-      3) provider="MINIMAX"; default_model="minimax/MiniMax-M2.1"; break ;;
-      4) provider="DASHSCOPE"; default_model="dashscope/qwen-max"; break ;;
-      5) provider="MOONSHOT"; default_model="moonshot/kimi-k2.5"; break ;;
+      1) provider="DEEPSEEK"; default_model="deepseek-v4-pro"; break ;;
+      2) provider="ZHIPU"; default_model="glm-5.1"; break ;;
+      3) provider="MINIMAX"; default_model="MiniMax-M2.7"; break ;;
+      4) provider="DASHSCOPE"; default_model="qwen-3.6-plus"; break ;;
+      5) provider="MOONSHOT"; default_model="kimi-k2.6"; break ;;
       6) provider="CUSTOM"; default_model="custom/model-name"; break ;;
       7) exec 3>&-; return ;;
       *) printf 'Please select 1-7.\n' >&3 ;;
