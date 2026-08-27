@@ -94,18 +94,18 @@ EasyGS是一个面向作物基因组选择分析的AIAgent。用户可以用自�
 直接从 GitHub Release 安装最新版 wheel：
 
 ```bash
-pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.5/easygs-0.1.5-py3-none-any.whl
+pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.7/easygs-0.1.7-py3-none-any.whl
 ```
 
 也可以打开发布页面手动下载 wheel：
 
 - 最新发布页面：<https://github.com/lukegood/EasyGS/releases/latest>
-- 当前 wheel：<https://github.com/lukegood/EasyGS/releases/download/v0.1.5/easygs-0.1.5-py3-none-any.whl>
+- 当前 wheel：<https://github.com/lukegood/EasyGS/releases/download/v0.1.7/easygs-0.1.7-py3-none-any.whl>
 
 下载完成后，在本地安装：
 
 ```bash
-pip install /path/to/easygs-0.1.5-py3-none-any.whl
+pip install /path/to/easygs-0.1.7-py3-none-any.whl
 ```
 
 确认安装成功：
