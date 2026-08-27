@@ -201,7 +201,7 @@ class ChannelsConfig(BaseModel):  # channel默认配置
 class AgentDefaults(BaseModel):  # Agent默认配置
     """Default agent configuration."""
     workspace: str = "~/.easygs/workspace"
-    model: str = "anthropic/claude-opus-4-5"
+    model: str = "deepseek-v4-pro"
     max_tokens: int = 8192
     reasoning_effort: str | None = None
     temperature: float = 0.7

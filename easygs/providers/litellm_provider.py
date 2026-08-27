@@ -24,7 +24,7 @@ class LiteLLMProvider(LLMProvider):
         self, 
         api_key: str | None = None,   # API密钥
         api_base: str | None = None,  # API地址
-        default_model: str = "anthropic/claude-opus-4-5",  # 默认模型
+        default_model: str = "deepseek-v4-pro",  # 默认模型
         extra_headers: dict[str, str] | None = None,  # 额外HTTP头
         provider_name: str | None = None,  # 提供商名称
     ):
