@@ -22,14 +22,16 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | `allele_frequency_analysis` | Run vcftools allele-frequency analysis and summarize polymorphic-site proportion |
 | `allele_frequency_spectrum_analysis` | Run PLINK `--freqx` on a BFILE dataset and summarize allele-frequency spectrum |
 | `bfile_extract_analysis` | Extract variants from a BFILE into a new BED/BIM/FAM dataset |
-| `candidate_gene_extraction_analysis` | Extract candidate genes from a user-provided BED file by LD expansion and gene annotation overlap |
+| `candidate_gene_extraction_analysis` | Extract maize, wheat, or rice candidate genes by LD expansion and species gene-BED overlap |
 | `combining_ability_analysis` | Estimate female GCA, male GCA, and hybrid SCA from a hybrid phenotype CSV |
 | `cvf_split_analysis` | Generate a CVF CSV from a one-column material LIST TXT |
 | `env_factor_correlation_analysis` | Compute region-specific environmental-factor correlations and render a heatmap |
 | `environment_index_analysis` | Run the CERIS-style environment index workflow from EnvPheno text inputs |
 | `env_region_correlation_analysis` | Compute cross-region correlations from combined environmental-factor profiles |
+| `fastq_to_vcf_analysis` | Run the maize B73 v4 paired-end FASTQ-to-VCF pipeline for any number of matched sample pairs |
 | `gene_environment_interaction_analysis` | Run SNP-by-environment-factor interaction ANOVA from a VCF and EnvPheno CSV inputs |
 | `gene_function_annotation_analysis` | Run maize GO/KEGG enrichment from a gene list TXT using built-in Zm V4 gene-to-ENTREZ mapping |
+| `wheat_rice_gene_function_enrichment_analysis` | Run offline GO and/or KEGG enrichment for wheat or rice using user-managed species resources |
 | `genebody_locus_annotation_analysis` | Annotate locus IDs that fall inside maize V4 gene bodies using the built-in allV4gene.bed |
 | `gebv_analysis` | Estimate genomic breeding values from a GRM prefix and phenotype file |
 | `genotype_encoding_analysis` | Run PLINK `--recodeA` to encode genotypes as a 0/1/2 additive matrix |
@@ -46,11 +48,11 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | `missingness_analysis` | Run standalone PLINK missingness analysis and reporting |
 | `mean_nucleotide_diversity_analysis` | Compute average pi from a user-provided vcftools .sites.pi file |
 | `nucleotide_diversity_analysis` | Run vcftools site-pi or window-pi analysis and summarize nucleotide diversity |
-| `ortholog_extraction_analysis` | Extract ortholog rows from a user-provided gene list TXT and ortholog matrix TSV |
+| `ortholog_extraction_analysis` | Extract maize, wheat, or rice ortholog rows from species matrix resources by exact source-gene matching |
 | `pca_analysis` | Run PCA on a BFILE dataset and generate a variance report |
-| `peak_annotation_analysis` | Run ChIPseeker-based locus structural annotation from GFF3/GFF and BED inputs |
+| `peak_annotation_analysis` | Run maize, wheat, or rice ChIPseeker locus structural annotation from BED input and species resources |
 | `protein_function_annotation_analysis` | Extract maize protein function/domain annotation rows for a user-provided gene list without enrichment |
-| `pfam_enrichment_analysis` | Extract candidate proteins and run maize-only PFAM/domain enrichment with user-managed longest-CDS and proteins annotation resources |
+| `pfam_enrichment_analysis` | Run maize, wheat, or rice PFAM/domain enrichment with species resources and streaming InterProScan preprocessing |
 | `phenotype_blup_analysis` | Compute BLUP values from a multi-environment phenotype CSV using a mixed model |
 | `phenotype_region_correlation_analysis` | Compute cross-region phenotype correlations from a phe.csv file |
 | `population_structure_kinship_analysis` | Run the combined LD-pruned PCA, GRM, and ADMIXTURE workflow |

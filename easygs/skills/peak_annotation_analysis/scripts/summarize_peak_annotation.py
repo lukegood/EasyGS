@@ -11,6 +11,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize peak annotation outputs.")
+    parser.add_argument("--species", required=True, choices=("maize", "wheat", "rice"))
     parser.add_argument("--gff3", required=True, help="Input GFF3/GFF path.")
     parser.add_argument("--bed", required=True, help="Input BED path.")
     parser.add_argument("--output-tsv", required=True, help="Annotation TSV output.")
@@ -46,6 +47,7 @@ def main() -> None:
     row_count, annotation_counts = _collect_annotation_counts(output_tsv)
     lines = [
         "=== 位点结构注释 ===",
+        f"Species: {args.species}",
         f"GFF3: {args.gff3}",
         f"BED: {args.bed}",
         f"TSS region: -{args.tss_upstream}bp to +{args.tss_downstream}bp",

@@ -1,124 +1,135 @@
 ---
 name: pfam_enrichment_analysis
-description: Extract candidate proteins from a gene list and run maize-only PFAM/domain enrichment using user-managed longest-CDS and proteins annotation resources.
+description: Run PFAM/domain enrichment for maize, wheat, or rice from a gene list using species-specific EasyGS resources and streaming InterProScan preprocessing.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
 # PFAM Enrichment Skill
 
-Run PFAM/domain enrichment using the built-in `pfam_enrichment_analysis` tool.
+Run maize, wheat, or rice PFAM/domain enrichment with the built-in
+`pfam_enrichment_analysis` tool.
 
-This skill is maize-only. It is designed for Zea mays gene IDs (`Zm...`) and requires user-managed external resource files.
-
-Default resource directory:
+Resource directory:
 
 ```text
 ~/.easygs/resources/pfam_enrichment_analysis/
 ```
 
-Required resource files:
+Species resources:
 
-```text
-~/.easygs/resources/pfam_enrichment_analysis/all_maize_longest_cds.txt
-~/.easygs/resources/pfam_enrichment_analysis/all_maize_genes_proteins.fa.tsv
-```
+- maize, the legacy default:
+  - `all_maize_longest_cds.txt`
+  - `all_maize_genes_proteins.fa.tsv`
+- wheat:
+  - `wheat_interpro.tsv`
+- rice:
+  - `Osativa_323_v7.0.protein_primaryTranscriptOnly.fa.tsv`
 
-These files are not bundled with EasyGS because they are large reference resources. The user must download or prepare them manually and place them at the exact paths above. If `EASYGS_RESOURCES_DIR` is set, the tool uses that directory as the resource root instead of `~/.easygs/resources`.
+If `EASYGS_RESOURCES_DIR` is set, that directory replaces `~/.easygs/resources`.
 
-This should be treated as one complete workflow rather than separate user-facing steps, because the analysis depends on one tightly coupled chain:
+This is one complete workflow:
 
-1. validate the user-provided gene list TXT
-2. map genes to protein IDs using the maize longest-CDS TXT resource
-3. create `protlist.txt`
-4. extract matching protein-annotation rows into `protlist.stranno.tsv`
-5. filter the selected annotation source into an internal source-specific TSV
-6. run hypergeometric enrichment on the selected annotation source
-7. export complete and significant enrichment CSV files
-8. write a compact summary
+1. validate the gene list and select species resources
+2. for maize, map genes to longest-CDS protein IDs using the legacy mapping
+3. for wheat/rice, normalize numeric transcript suffixes such as `.1`
+4. stream the large InterProScan file and retain candidate annotations plus compact PFAM rows
+5. use all PFAM-annotated IDs as the default background, or a user background when supplied
+6. calculate hypergeometric and Fisher p-values, fold enrichment, and adjusted p-values
+7. export all/significant CSV files, candidate annotations, and a summary
 
-Do not split this into separate public tools for "protlist extraction", "annotation row extraction", or "PFAM enrichment only". Those stay internal inside one complete workflow.
+Do not expose reference-resource paths or split preprocessing and enrichment into separate public
+tools.
 
 ## Tool-First Rule
 
 Use `pfam_enrichment_analysis(...)` for execution.
 
-## What the Tool Runs
+## Required Input
 
-The pipeline:
-
-1. reads the user-provided `genelist.txt`
-2. reads the maize longest-CDS mapping TXT from the user resource directory
-3. extracts protein IDs into `protlist.txt`
-4. extracts matching annotation rows into `protlist.stranno.tsv`
-5. filters the selected annotation source from the maize proteins TSV resource into an internal source-specific TSV
-6. runs hypergeometric enrichment
-7. writes `<output_prefix>_all_pfam_enrichment.csv`
-8. writes `<output_prefix>_sig_pfam.csv`
-9. writes a compact summary text file
-
-## Required Inputs
-
-- `genelist_txt`: user-provided gene list TXT. Example:
+- `genelist_txt`: one gene ID per line. Wheat example:
 
 ```text
-Zm00001d031939
-Zm00001d031940
-Zm00001d031941
-Zm00001d031942
+TraesCS6A03G0926000
+TraesCS3D03G0591600
+TraesCS3B03G0806700
+TraesCS1D03G0346300
+```
+
+Rice example:
+
+```text
+LOC_Os02g07880
+LOC_Os01g19750
+LOC_Os05g33910
+LOC_Os07g42632
 ```
 
 ## Optional Parameters
 
-- `background_protein_txt`: custom background protein list TXT. Default: use all annotated proteins from the selected annotation source
-- `annotation_source`: annotation/library name from the maize proteins TSV column 4. Default: `Pfam`
-- `min_count_in_candidates`: minimum candidate count required for significant reporting. Default: `5`
-- `p_adjust_method`: p-value adjustment method. Default: `BH`
-- `fdr_cutoff`: adjusted p-value cutoff. Default: `0.05`
-- `output_dir`: root directory for outputs; when omitted, the runtime supplies the default for the current context
-- `output_prefix`: result-file prefix. Default: `pfam_enrichment`
+- `species`: `maize`, `wheat`, or `rice`; default: `maize`
+- `background_protein_txt`: optional gene/protein ID background; default: all PFAM-annotated IDs
+- `annotation_source`: InterProScan analysis/library in column 4; default: `Pfam`
+- `min_count_in_candidates`: minimum `k` for significant results; default: `5` for maize and
+  `2` for wheat/rice
+- `p_adjust_method`: method passed to R `p.adjust`; default: `BH`
+- `fdr_cutoff`: adjusted-p cutoff; default: `0.05`
+- `output_dir`: output directory; runtime context supplies a default when omitted
+- `output_prefix`: default `pfam_enrichment` for maize, `wheat_pfam_enrichment` for wheat, and
+  `rice_pfam_enrichment` for rice
 
-If the user wants any of these changed, ask them to provide the override explicitly instead of guessing.
+## Outputs
 
-Default output pattern:
+Primary outputs:
 
-- `<output_dir>/protlist.txt`
-- `<output_dir>/protlist.stranno.tsv`
-- `<output_dir>/<output_prefix>_<annotation_source>.source.tsv`
-- `<output_dir>/pfam_enrichment_all_pfam_enrichment.csv`
-- `<output_dir>/pfam_enrichment_sig_pfam.csv`
-- `<output_dir>/pfam_enrichment_summary.txt`
+- `<prefix>_all_pfam_enrichment.csv`
+- `<prefix>_sig_pfam.csv`
+- `<prefix>_summary.txt`
+
+Supporting outputs:
+
+- `protlist.txt`
+- `protlist.stranno.tsv`
+- `<prefix>_<annotation_source>.source.tsv`
+
+For wheat/rice, the all-results schema follows the original workflow:
+`pfam,K,k,p_hyper,p_fisher,FoldEnrichment,p_adj,negLog10P,negLog10FDR`.
+
+## Large-File Rule
+
+The wheat and rice InterProScan resources are multi-gigabyte files. Never load either entire raw
+file into Python or R memory. The bundled preprocessing script reads one line at a time and writes
+a compact five-column source table before enrichment.
 
 ## Pre-Run Validation
 
-Before running analysis, remember that the tool itself always checks whether the required environment exists:
+The tool checks:
 
-- `EasyGS_2`
+- environment `EasyGS_2`
+- executables `Rscript`, `awk`, and `python3`
+- gene-list ID prefix matching the selected species
+- required resource existence and at least five TSV columns
+- maize longest-CDS mapping when `species=maize`
+- valid count/FDR parameters
 
-Behavior rules:
-
-- The tool will stop automatically if the `EasyGS_2` environment is missing
-- The tool will stop automatically if `Rscript`, `awk`, or `python3` is not available inside `EasyGS_2`
-- The pipeline reads `all_maize_longest_cds.txt` from `~/.easygs/resources/pfam_enrichment_analysis/`
-- The pipeline reads `all_maize_genes_proteins.fa.tsv` from `~/.easygs/resources/pfam_enrichment_analysis/`
-- Do not ask the user for these resource paths during normal use
-- If either resource file is missing, report the exact expected path and ask the user to place the file there
-- This tool only supports maize data
-- Do not invent file paths
+Stop and report the exact error when validation fails.
 
 ## Parameter Collection Rules
 
-Before calling `pfam_enrichment_analysis(...)`, collect the required gene list TXT unless it is already available in the conversation.
+Collect the gene-list path and species unless already available. Omitting species intentionally
+keeps the legacy maize default.
 
-Behavior rules:
-
-- When asking for required input files, always provide data examples with 3 to 4 sample rows together with the format description
-- If mentioning optional parameters, always tell the user the default values and remind them to provide overrides explicitly
-- This tool only supports maize data and maize gene IDs
+- Never ask for or expose an annotation resource path as a normal parameter
+- Infer species only when unambiguous; otherwise ask whether the genes are maize, wheat, or rice
+- Show three or four example rows when asking for a gene list
+- Use default thresholds and output location unless the user requests overrides
+- Do not invent paths
 
 ## Result Interpretation
 
-After a successful run, the summary should highlight:
+After a successful run, report:
 
-- the generated `protlist.txt` and `protlist.stranno.tsv`
-- the complete and significant enrichment CSV files
-- the number of candidate proteins, annotated rows, enriched domains, and significant domains
+- selected species and resource
+- candidate IDs represented in the PFAM background
+- total and significant PFAM counts
+- top domains with candidate count and adjusted p-value
+- all output paths

@@ -2,6 +2,7 @@
 
 import asyncio
 import csv
+import math
 import re
 import shutil
 import tempfile
@@ -11,6 +12,7 @@ from typing import Any
 
 from easygs.agent.tools.base import Tool
 from easygs.agent.tools.filesystem import _resolve_path
+
 
 @dataclass
 class PreparedHeritabilityRun:  # 遗传力专用准备结果
@@ -416,11 +418,40 @@ class RunHeritabilityTool(Tool):
                 "Phenotype file must be tab-delimited with exactly three columns: FID, IID, and one trait column"
             )
 
-        first_row = non_empty[1].split("\t")
-        if len(first_row) != 3:
-            raise ValueError(
-                "Phenotype file must be tab-delimited with exactly three columns in each row"
-            )
+        seen_ids: set[tuple[str, str]] = set()
+        missing_values = {"-9", "na", "nan"}
+        for line_number, line in enumerate(non_empty[1:], start=2):
+            row = line.split("\t")
+            if len(row) != 3:
+                raise ValueError(
+                    "Phenotype file must be tab-delimited with exactly three columns in each "
+                    f"row (invalid row: {line_number})"
+                )
+
+            fid, iid, value = (cell.strip() for cell in row)
+            if not fid or not iid:
+                raise ValueError(
+                    f"Phenotype FID and IID must not be empty (invalid row: {line_number})"
+                )
+
+            sample_key = (fid, iid)
+            if sample_key in seen_ids:
+                raise ValueError(
+                    "Phenotype file contains a duplicate FID/IID pair: "
+                    f"{fid}/{iid} (row: {line_number})"
+                )
+            seen_ids.add(sample_key)
+
+            if value.lower() in missing_values:
+                continue
+            try:
+                numeric_value = float(value)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Phenotype value must be numeric or a supported missing value (row: {line_number})"
+                ) from exc
+            if not math.isfinite(numeric_value):
+                raise ValueError(f"Phenotype value must be finite (invalid row: {line_number})")
 
     def _normalize_keep_input(self, keep_path: Path, tmp_root: Path) -> tuple[Path, str]:
         if keep_path.suffix.lower() not in {".csv", ".tsv"}:
@@ -485,6 +516,11 @@ class RunHeritabilityTool(Tool):
     ) -> str:
         result_prefix = prepared.result_prefix
         summary = self._summarize_hsq(result_prefix.with_suffix(".hsq"))
+        if not summary:
+            return (
+                "Error: Heritability analysis exited without a valid .hsq result containing "
+                f"V(G)/Vp: {result_prefix.with_suffix('.hsq')}"
+            )
         lines = [
             "Heritability analysis completed.",
             f"- Launcher: {prepared.launcher}",

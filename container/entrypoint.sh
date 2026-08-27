@@ -77,6 +77,8 @@ mkdir -p \
   "$EASYGS_HOME/history" \
   "$EASYGS_HOME/run" \
   "$EASYGS_HOME/cron" \
+  "$EASYGS_HOME/sessions" \
+  "$EASYGS_HOME/workflows" \
   /data
 
 if [ ! -f "$CONFIG_PATH" ]; then

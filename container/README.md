@@ -1,78 +1,33 @@
-# EasyGS Docker Guide
+# EasyGS Analysis Container
 
-This guide explains how to run EasyGS with Docker. The container includes the EasyGS Python package, Web UI, bridge service, and the conda environments required by the GS analysis tools.
+This container packages EasyGS with its analysis environments. It is intended
+for users who want to mount data and run EasyGS without installing conda,
+R, PLINK, bcftools, or the EasyGS Python package on the host.
 
-For the Chinese version, see [README_zh.md](README_zh.md).
-
-## When to Use Docker
-
-Use Docker if you want a reproducible runtime without installing conda, R packages, PLINK, bcftools, or EasyGS directly on the host.
-
-The container still needs two mounted host directories:
-
-- `easygs-home`: mounted to `/home/easygs/.easygs`, used for `config.json`, workspace outputs, resources, history, and runtime state.
-- `data`: mounted to `/data`, used for user input datasets.
-
-Inside EasyGS, always refer to mounted data files with `/data/...` paths.
-
-## Quick Start with Docker Compose
-
-From the project root:
+For an automated source checkout, image build, and service start, use the
+repository-level `install.sh`:
 
 ```bash
-cd /path/to/easygs
-cp .env.example .env
-mkdir -p ./easygs-home ./data
+curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | bash
 ```
 
-Edit `.env`:
+The image builds the current EasyGS source and WebUI together with five analysis
+environments:
 
-```dotenv
-EASYGS_IMAGE=your-dockerhub-name/easygs:analysis
-EASYGS_HOME_DIR=./easygs-home
-EASYGS_DATA_DIR=./data
+- `EasyGS_1`: R-based GWAS, annotation, enrichment, and correlation workflows
+- `EasyGS_2`: PLINK/VCF, population genetics, imputation, and extraction workflows
+- `EasyGS_3`: genomic prediction and variance-decomposition workflows
+- `EasyGS_4`: Fast3VmrMLM QEI workflows
+- `EasyGS_5`: FASTQ quality control, alignment, and GATK variant calling
 
-EASYGS_MODEL=deepseek-v4-pro
-DEEPSEEK_API_KEY=your-api-key
-DEEPSEEK_API_BASE=your-api-base
-```
+The build also validates the commands and key R packages required by these
+workflows before producing the image.
 
-Fill only the provider credentials you use. Common providers include `DEEPSEEK_API_KEY`, `ZHIPU_API_KEY`, `MOONSHOT_API_KEY`, `MINIMAX_API_KEY`, `DASHSCOPE_API_KEY`, and `CUSTOM_API_KEY`.
-
-Start EasyGS:
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-Open the Web UI:
-
-```text
-http://127.0.0.1:25685
-```
-
-If EasyGS runs on a remote server, forward the port from your own computer:
-
-```bash
-ssh -L 25685:127.0.0.1:25685 user@server_ip
-```
-
-Then open `http://127.0.0.1:25685` in your local browser.
-
-## Build a Local Image
-
-If you want to build the image locally instead of using a published image:
+## Build
 
 ```bash
 cd /path/to/easygs
 container/build.sh
-```
-
-This builds:
-
-```text
-easygs:analysis
 ```
 
 The build defaults to China-friendly mirrors:
@@ -82,7 +37,10 @@ The build defaults to China-friendly mirrors:
 - npm: npmmirror
 - PyPI: TUNA
 
-You can override mirrors at build time:
+The default Miniforge installer is for Linux x86_64/amd64. Use a matching
+`MINIFORGE_URL` build argument if you build for another architecture.
+
+You can switch mirrors at build time:
 
 ```bash
 container/build.sh analysis \
@@ -92,146 +50,172 @@ container/build.sh analysis \
   --build-arg MINIFORGE_URL=https://mirrors.bfsu.edu.cn/github-release/conda-forge/miniforge/LatestRelease/Miniforge3-Linux-x86_64.sh
 ```
 
-After building, you can run the local image with the compose file under `container/`:
+## Run
 
-```bash
-cd container
-cp .env.example .env
-mkdir -p ./easygs-home /path/to/your/data
-```
+EasyGS containers require two host directories:
 
-Edit `container/.env`:
+- `easygs-home`: mounted to `/home/easygs/.easygs`; stores `config.json`,
+  workspace outputs, resources, history, and cron state.
+- `data`: mounted to `/data`; stores user input datasets.
 
-```dotenv
-EASYGS_HOME_DIR=./easygs-home
-EASYGS_DATA_DIR=/path/to/your/data
-
-EASYGS_MODEL=deepseek-v4-pro
-DEEPSEEK_API_KEY=your-api-key
-DEEPSEEK_API_BASE=your-api-base
-```
-
-Then start:
-
-```bash
-docker compose up -d
-```
-
-## Run with `docker run`
-
-You can also run the image directly:
+Run with Docker:
 
 ```bash
 docker run --rm -it \
   --network host \
   -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
-  -e EASYGS_AGENTS__DEFAULTS__MODEL=deepseek-v4-pro \
-  -e EASYGS_PROVIDERS__DEEPSEEK__API_KEY=your-api-key \
-  -e EASYGS_PROVIDERS__DEEPSEEK__API_BASE=your-api-base \
+  -v /path/to/data:/data \
+  -e EASYGS_AGENTS__DEFAULTS__MODEL=anthropic/claude-opus-4-5 \
+  -e EASYGS_AGENTS__DEFAULTS__MAX_TOKENS=8192 \
+  -e EASYGS_AGENTS__DEFAULTS__REASONING_EFFORT=max \
+  -e EASYGS_PROVIDERS__ANTHROPIC__API_KEY=sk-xxx \
   easygs:analysis
 ```
 
-When no command is provided, the container starts:
+With Docker Compose, copy `.env.example` to `.env` and set both required
+directories:
 
-```bash
-easygs gateway --research-mode
+```dotenv
+EASYGS_HOME_DIR=./easygs-home
+EASYGS_DATA_DIR=/path/to/data
 ```
 
-## Run EasyGS Commands
+The same file can configure the image tag, model limits, shell timeout,
+workspace restriction, Brave Search, provider credentials, notifications, and
+an optional container UID/GID override.
 
-Pass a command after the image name to run EasyGS CLI commands:
+Compose exits with an error if either variable is empty or missing.
+Create both host directories before the first start so ownership is clear:
 
 ```bash
-docker run --rm -it \
-  -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
-  easygs:analysis easygs status
-
-docker run --rm -it \
-  -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
-  easygs:analysis easygs agent
+mkdir -p ./easygs-home /path/to/data
 ```
 
-## Workspace and Resources
+Open:
 
-Outputs are written to the EasyGS workspace inside the container:
+```text
+http://127.0.0.1:25685
+```
+
+Inside EasyGS, refer to mounted input files by their container path:
+
+```text
+/data/example.vcf.gz
+```
+
+Outputs are written to EasyGS' normal workspace:
 
 ```text
 /home/easygs/.easygs/workspace
 ```
 
-With the compose examples above, this maps to:
+With the compose defaults, that path maps to:
 
 ```text
-./easygs-home/workspace
+container/easygs-home/workspace
 ```
 
-Some tools require large reference files that are not bundled into the image. Put external resources under:
+External resources are not bundled into the image. Put resources under:
 
 ```text
-./easygs-home/resources
+container/easygs-home/resources
 ```
 
-For example:
+For maize B73 v4 FASTQ-to-VCF analysis, place the reference and its indexes
+under:
 
 ```text
-./easygs-home/resources/pfam_enrichment_analysis/all_maize_longest_cds.txt
-./easygs-home/resources/pfam_enrichment_analysis/all_maize_genes_proteins.fa.tsv
+container/easygs-home/resources/fastq_to_vcf_analysis/
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.amb
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.ann
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.bwt
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.pac
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.sa
+├── Zm-B73-REFERENCE-GRAMENE-4.0.fa.fai
+└── Zm-B73-REFERENCE-GRAMENE-4.0.dict
 ```
 
-## Channels and Notifications
+For maize/wheat/rice candidate-gene extraction, place the three species gene BED resources under:
 
-Docker Compose exposes environment variables for Feishu/Lark and standalone SMTP notifications.
-
-For Feishu/Lark, set:
-
-```dotenv
-FEISHU_ENABLED=true
-FEISHU_APP_ID=your-app-id
-FEISHU_APP_SECRET=your-app-secret
-FEISHU_ENCRYPT_KEY=your-encrypt-key
-FEISHU_VERIFICATION_TOKEN=your-verification-token
-FEISHU_ALLOW_FROM=[]
+```text
+container/easygs-home/resources/candidate_gene_extraction_analysis/
 ```
 
-For task-completion email notifications, set:
+For wheat/rice offline GO/KEGG enrichment, place the seven required mapping and
+annotation files under:
 
-```dotenv
-EMAIL_NOTIFY_ENABLED=true
-EMAIL_NOTIFY_SMTP_HOST=smtp.example.com
-EMAIL_NOTIFY_SMTP_PORT=587
-EMAIL_NOTIFY_SMTP_USERNAME=your-username
-EMAIL_NOTIFY_SMTP_PASSWORD=your-password
-EMAIL_NOTIFY_FROM_ADDRESS=from@example.com
-EMAIL_NOTIFY_TO_ADDRESS=to@example.com
+```text
+container/easygs-home/resources/wheat_rice_gene_function_enrichment_analysis/
 ```
 
-## Check Analysis Environments
+For maize/wheat/rice peak annotation, place the species GFF3 resources under:
 
-The image contains the conda environments used by EasyGS analysis tools:
+```text
+container/easygs-home/resources/peak_annotation_analysis/
+```
+
+For maize/wheat/rice ortholog extraction, place the three species matrices under:
+
+```text
+container/easygs-home/resources/ortholog_extraction_analysis/
+```
+
+For maize/wheat/rice PFAM enrichment, place the species mapping/annotation resources under:
+
+```text
+container/easygs-home/resources/pfam_enrichment_analysis/
+```
+
+## Docker Compose
+
+```bash
+cd container
+cp .env.example .env
+# Edit EASYGS_HOME_DIR, EASYGS_DATA_DIR, model, and provider credentials, then:
+docker compose up
+```
+
+The compose file uses `network_mode: host` because the current EasyGS WebUI
+bootstrap endpoint is intentionally localhost-only.
+
+## Commands
+
+Run any EasyGS command by passing it after the image name:
+
+```bash
+docker run --rm -it \
+  -v "$PWD/easygs-home:/home/easygs/.easygs" \
+  -v /path/to/data:/data \
+  easygs:analysis easygs status
+
+docker run --rm -it \
+  -v "$PWD/easygs-home:/home/easygs/.easygs" \
+  -v /path/to/data:/data \
+  easygs:analysis easygs agent
+```
+
+Check bundled analysis environments:
 
 ```bash
 docker run --rm \
   -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
+  -v /path/to/data:/data \
   easygs:analysis conda env list
 
 docker run --rm \
   -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
-  easygs:analysis mamba run -n EasyGS_1 command -v bcftools
+  -v /path/to/data:/data \
+  easygs:analysis mamba run -n EasyGS_1 bash -c 'command -v bcftools'
 
 docker run --rm \
   -v "$PWD/easygs-home:/home/easygs/.easygs" \
-  -v "$PWD/data:/data" \
-  easygs:analysis mamba run -n EasyGS_2 command -v plink
+  -v /path/to/data:/data \
+  easygs:analysis mamba run -n EasyGS_2 bash -c 'command -v plink'
+
+docker run --rm \
+  -v "$PWD/easygs-home:/home/easygs/.easygs" \
+  -v /path/to/data:/data \
+  easygs:analysis mamba run -n EasyGS_5 bash -c \
+  'for tool in fastp bwa samtools picard gatk bcftools bgzip tabix; do command -v "$tool"; done'
 ```
-
-## Notes
-
-- The compose files use `network_mode: host`, so the Web UI listens on the host at `127.0.0.1:25685`.
-- The container entrypoint requires both `/home/easygs/.easygs` and `/data` to be mounted.
-- The entrypoint creates a default `config.json` if one does not exist, then applies `EASYGS_...__...` environment-variable overrides.
-- If you change model or provider settings in `.env`, restart the container with `docker compose up -d`.

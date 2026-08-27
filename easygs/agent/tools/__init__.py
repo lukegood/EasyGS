@@ -50,6 +50,9 @@ from easygs.agent.tools.variant_filter import RunVariantFilterTool
 from easygs.agent.tools.vcf_format_conversion import RunVcfFormatConversionTool
 from easygs.agent.tools.vcf_stats import RunVcfStatsTool
 from easygs.agent.tools.vcf_variant_extract import RunVcfVariantExtractTool
+from easygs.agent.tools.wheat_rice_gene_function_enrichment import (
+    RunWheatRiceGeneFunctionEnrichmentTool,
+)
 from easygs.agent.tools.workflow import AnalysisActionTool
 from easygs.agent.tools.workflows import (
     AddWorkflowMessageTool,
@@ -115,6 +118,7 @@ __all__ = [
     "RunVariantFilterTool",
     "RunLdPruneTool",
     "RunVcfStatsTool",
+    "RunWheatRiceGeneFunctionEnrichmentTool",
     "SubmitWorkflowTool",
     "GetActiveWorkflowStatusTool",
     "AddWorkflowMessageTool",

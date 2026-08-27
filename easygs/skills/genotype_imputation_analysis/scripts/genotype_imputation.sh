@@ -72,7 +72,7 @@ esac
 mkdir -p "$(dirname "$output_prefix")"
 mkdir -p "$(dirname "$summary_output")"
 
-java -jar "$jar_path" gt="$vcf_file" out="$output_prefix"
+java -Xmx200g -jar "$jar_path" gt="$vcf_file" out="$output_prefix"
 
 python3 "$summary_script" \
   --input-vcf "$vcf_file" \

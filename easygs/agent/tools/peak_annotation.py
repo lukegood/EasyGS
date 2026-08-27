@@ -11,7 +11,11 @@ from easygs.agent.tools.filesystem import _resolve_path
 from easygs.agent.tools.plink_common import PlinkToolBase
 from easygs.resources import resolve_user_resource_path
 
-_MAIZE_GFF3_FILENAME = "Zea_mays.B73_RefGen_v4.43_modify.gff3"
+_SPECIES_GFF3_FILENAMES = {
+    "maize": "Zea_mays.B73_RefGen_v4.43_modify.gff3",
+    "wheat": "Taestivumcv_ChineseSpring_725_v2.1.gene.gff3",
+    "rice": "Osativa_323_v7.0.gene.gff3",
+}
 
 
 @dataclass
@@ -19,6 +23,7 @@ class PreparedPeakAnnotationRun:
     """Prepared execution plan for peak annotation."""
 
     launcher: str
+    species: str
     tss_upstream: int
     tss_downstream: int
     command: list[str]
@@ -34,6 +39,7 @@ class PreparedPeakAnnotationRun:
     def to_metadata(self) -> dict[str, Any]:
         return {
             "launcher": self.launcher,
+            "species": self.species,
             "tss_upstream": self.tss_upstream,
             "tss_downstream": self.tss_downstream,
             "gff3_path": str(self.gff3_path),
@@ -47,9 +53,8 @@ class PreparedPeakAnnotationRun:
         }
 
 
-
 class RunPeakAnnotationTool(PlinkToolBase, Tool):
-    """Run maize-only ChIPseeker locus/peak structural annotation from BED input."""
+    """Run ChIPseeker locus/peak structural annotation for maize, wheat, or rice."""
 
     def __init__(self, workspace: Path, restrict_to_workspace: bool = False, timeout: int = 3600):
         super().__init__(
@@ -63,10 +68,10 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         self.script_path = self.skill_dir / "peak_annotation.sh"
         self.r_script_path = self.skill_dir / "run_peak_annotation.R"
         self.summary_script_path = self.skill_dir / "summarize_peak_annotation.py"
-        self.gff3_resource_path = resolve_user_resource_path(
-            "peak_annotation_analysis",
-            _MAIZE_GFF3_FILENAME,
-        )
+        self.gff3_resource_paths = {
+            species: resolve_user_resource_path("peak_annotation_analysis", filename)
+            for species, filename in _SPECIES_GFF3_FILENAMES.items()
+        }
 
     @property
     def name(self) -> str:
@@ -75,9 +80,9 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
     @property
     def description(self) -> str:
         return (
-            "Run maize-only ChIPseeker-based locus structural annotation in EasyGS_1 using the "
-            "user-managed Zea mays B73 RefGen v4.43 GFF3 resource and a BED file, then export "
-            "annotation TSV and annotation pie-chart PNG outputs."
+            "Run ChIPseeker-based locus structural annotation for maize, wheat, or rice in "
+            "EasyGS_1. The species-specific GFF3 is selected automatically from user-managed "
+            "EasyGS resources; the user supplies only a BED file and species."
         )
 
     @property
@@ -85,13 +90,14 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         return {
             "type": "object",
             "properties": {
-                "gff3": {
+                "species": {
                     "type": "string",
+                    "enum": ["maize", "wheat", "rice"],
+                    "default": "maize",
                     "description": (
-                        "Optional explicit maize gene annotation path. Defaults to the "
-                        f"user-managed resource: {self.gff3_resource_path}. "
-                        "Usually leave this unset; set EASYGS_RESOURCES_DIR to use a different "
-                        "resource root."
+                        "Species whose reference gene annotation should be used: maize, wheat, "
+                        "or rice. Default: maize. The matching GFF3 is resolved automatically "
+                        "from ~/.easygs/resources/peak_annotation_analysis/."
                     ),
                 },
                 "bed": {
@@ -143,17 +149,22 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
     async def execute(
         self,
         bed: str,
-        gff3: str | None = None,
+        species: str = "maize",
         output_dir: str | None = None,
         output_prefix: str | None = None,
         tss_upstream: int | None = None,
         tss_downstream: int | None = None,
         **kwargs: Any,
     ) -> str:
+        if kwargs.get("gff3"):
+            return (
+                "Error: gff3 is no longer a public parameter for peak_annotation_analysis. "
+                "Select species=maize, wheat, or rice; EasyGS will use the matching resource."
+            )
         try:
             prepared = await self.prepare_run(
                 bed=bed,
-                gff3=gff3,
+                species=species,
                 output_dir=output_dir,
                 output_prefix=output_prefix,
                 tss_upstream=tss_upstream,
@@ -167,6 +178,7 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
             details = self._join_output(run_result["stdout"], run_result["stderr"])
             return (
                 "Error: Peak annotation analysis failed.\n"
+                f"- Species: {prepared.species}\n"
                 f"- GFF3: {prepared.gff3_path}\n"
                 f"- BED: {prepared.bed_path}\n"
                 f"- Output dir: {prepared.output_dir}\n"
@@ -177,6 +189,7 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         lines = [
             "Peak annotation analysis completed.",
             f"- Launcher: {prepared.launcher}",
+            f"- Species: {prepared.species}",
             f"- GFF3: {prepared.gff3_path}",
             f"- BED: {prepared.bed_path}",
             f"- TSS window: -{prepared.tss_upstream}bp to +{prepared.tss_downstream}bp",
@@ -197,15 +210,17 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         self,
         *,
         bed: str,
-        gff3: str | None = None,
+        species: str = "maize",
         output_dir: str | None = None,
         output_prefix: str | None = None,
         tss_upstream: int | None = None,
         tss_downstream: int | None = None,
     ) -> PreparedPeakAnnotationRun:
-        gff3_path = self._resolve_gff_file(gff3)
+        species_value = self._normalize_species(species)
+        gff3_path = self._resolve_gff_file(species_value)
         bed_path = self._resolve_bed_file(bed)
-        self._validate_bed_preview(bed_path)
+        bed_chromosomes = self._validate_bed_preview(bed_path)
+        self._validate_gff_chromosomes(gff3_path, bed_chromosomes)
         output_root = self._resolve_output_dir(output_dir)
         output_prefix_path = self._resolve_output_prefix(output_prefix, output_root, bed_path)
 
@@ -242,6 +257,8 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
             str(self.script_path),
             "--gff3",
             str(gff3_path),
+            "--species",
+            species_value,
             "--bed",
             str(bed_path),
             "--output-tsv",
@@ -262,6 +279,7 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
 
         return PreparedPeakAnnotationRun(
             launcher=env_status["launcher"],
+            species=species_value,
             tss_upstream=tss_upstream_value,
             tss_downstream=tss_downstream_value,
             command=command,
@@ -274,17 +292,14 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
             summary_path=summary_path,
         )
 
-    def _resolve_gff_file(self, value: str | None) -> Path:
-        if value and str(value).strip():
-            path = Path(value).expanduser().resolve()
-        else:
-            path = self.gff3_resource_path
-
+    def _resolve_gff_file(self, species: str) -> Path:
+        filename = _SPECIES_GFF3_FILENAMES[species]
+        path = self.gff3_resource_paths[species]
         if not path.exists():
             raise ValueError(
                 "Missing required resource for peak_annotation_analysis:\n"
                 f"{path}\n\n"
-                f"Please download or prepare {_MAIZE_GFF3_FILENAME} and place it at the "
+                f"Please download or prepare {filename} and place it at the "
                 "path above. Set EASYGS_RESOURCES_DIR to use a different resource root."
             )
         if not path.is_file():
@@ -292,6 +307,13 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
         if path.suffix.lower() not in {".gff3", ".gff", ".gtf"}:
             raise ValueError(f"GFF annotation input must end with .gff3, .gff, or .gtf: {path}")
         return path
+
+    def _normalize_species(self, value: str) -> str:
+        species = str(value).strip().lower()
+        if species not in _SPECIES_GFF3_FILENAMES:
+            allowed = ", ".join(_SPECIES_GFF3_FILENAMES)
+            raise ValueError(f"species must be one of: {allowed}")
+        return species
 
     def _resolve_bed_file(self, value: str) -> Path:
         path = _resolve_path(value, self.allowed_dir)
@@ -319,8 +341,9 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
             name = bed_path.stem or "locilist"
         return candidate.parent / name
 
-    def _validate_bed_preview(self, path: Path) -> None:
+    def _validate_bed_preview(self, path: Path) -> set[str]:
         valid_rows = 0
+        chromosomes: set[str] = set()
         with path.open("r", encoding="utf-8", errors="replace") as handle:
             for raw in handle:
                 line = raw.strip()
@@ -329,13 +352,43 @@ class RunPeakAnnotationTool(PlinkToolBase, Tool):
                 parts = line.split("\t")
                 if len(parts) < 3:
                     raise ValueError(f"BED file must have at least 3 tab-separated columns: {path}")
+                chromosome = parts[0].strip()
+                if not chromosome:
+                    raise ValueError(f"BED chromosome column must not be empty: {path}")
                 try:
-                    int(parts[1])
-                    int(parts[2])
+                    start = int(parts[1])
+                    end = int(parts[2])
                 except ValueError as exc:
                     raise ValueError(f"BED start/end columns must be integers: {path}") from exc
+                if start < 0 or end <= start:
+                    raise ValueError(
+                        f"BED coordinates must satisfy 0 <= start < end: {path}"
+                    )
+                chromosomes.add(chromosome)
                 valid_rows += 1
-                if valid_rows >= 3:
-                    break
         if valid_rows == 0:
             raise ValueError(f"BED file does not contain any valid data rows: {path}")
+        return chromosomes
+
+    def _validate_gff_chromosomes(self, path: Path, bed_chromosomes: set[str]) -> None:
+        missing = set(bed_chromosomes)
+        saw_feature = False
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            for raw in handle:
+                if not raw or raw.startswith("#"):
+                    continue
+                parts = raw.rstrip("\n").split("\t", 8)
+                if len(parts) != 9:
+                    continue
+                saw_feature = True
+                missing.discard(parts[0])
+                if not missing:
+                    return
+
+        if not saw_feature:
+            raise ValueError(f"GFF annotation does not contain any valid 9-column features: {path}")
+        missing_text = ", ".join(sorted(missing))
+        raise ValueError(
+            "BED chromosome names do not match the selected species GFF3. "
+            f"Missing from GFF3: {missing_text}. GFF3: {path}"
+        )

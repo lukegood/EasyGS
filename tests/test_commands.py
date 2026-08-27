@@ -15,8 +15,10 @@ def mock_paths():
     """Mock config/workspace paths for test isolation."""
     with patch("easygs.config.loader.get_config_path") as mock_cp, \
          patch("easygs.config.loader.save_config") as mock_sc, \
-         patch("easygs.config.loader.load_config") as mock_lc, \
-         patch("easygs.utils.helpers.get_workspace_path") as mock_ws:
+         patch("easygs.config.loader.load_config"), \
+         patch("easygs.utils.helpers.get_workspace_path") as mock_ws, \
+         patch("easygs.resources.resolve_user_resources_root") as mock_rr, \
+         patch("easygs.resources.resolve_user_resource_path") as mock_rp:
 
         base_dir = Path("./test_onboard_data")
         if base_dir.exists():
@@ -25,9 +27,12 @@ def mock_paths():
 
         config_file = base_dir / "config.json"
         workspace_dir = base_dir / "workspace"
+        resources_dir = base_dir / "resources"
 
         mock_cp.return_value = config_file
         mock_ws.return_value = workspace_dir
+        mock_rr.return_value = resources_dir
+        mock_rp.side_effect = lambda *parts: resources_dir.joinpath(*parts)
         mock_sc.side_effect = lambda config: config_file.write_text("{}")
 
         yield config_file, workspace_dir
@@ -49,6 +54,12 @@ def test_onboard_fresh_install(mock_paths):
     assert config_file.exists()
     assert (workspace_dir / "AGENTS.md").exists()
     assert (workspace_dir / "memory" / "MEMORY.md").exists()
+    assert Path("test_onboard_data/resources/fastq_to_vcf_analysis").is_dir()
+    assert Path("test_onboard_data/resources/candidate_gene_extraction_analysis").is_dir()
+    assert Path("test_onboard_data/resources/wheat_rice_gene_function_enrichment_analysis").is_dir()
+    assert Path("test_onboard_data/resources/peak_annotation_analysis").is_dir()
+    assert Path("test_onboard_data/resources/ortholog_extraction_analysis").is_dir()
+    assert Path("test_onboard_data/resources/pfam_enrichment_analysis").is_dir()
 
 
 def test_onboard_existing_config_refresh(mock_paths):

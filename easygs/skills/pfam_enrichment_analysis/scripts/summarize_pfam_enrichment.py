@@ -10,6 +10,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize PFAM/domain enrichment outputs.")
+    parser.add_argument("--species", required=True, choices=("maize", "wheat", "rice"))
     parser.add_argument("--genelist-txt", required=True, help="Input gene list TXT.")
     parser.add_argument("--longest-cds-txt", required=True, help="Built-in maize longest-CDS mapping TXT.")
     parser.add_argument("--proteins-tsv", required=True, help="Built-in maize protein annotation TSV.")
@@ -75,9 +76,10 @@ def main() -> None:
 
     lines = [
         "=== PFAM/结构域富集 ===",
+        f"Species: {args.species}",
         f"Gene list TXT: {args.genelist_txt}",
-        f"Maize longest CDS resource: {args.longest_cds_txt}",
-        f"Maize proteins TSV resource: {args.proteins_tsv}",
+        f"Longest CDS resource: {args.longest_cds_txt or 'not required'}",
+        f"Annotation TSV resource: {args.proteins_tsv}",
         f"Background protein TXT: {args.background_protein_txt or 'default(all annotated proteins)'}",
         f"Annotation source: {args.annotation_source}",
         f"Min count in candidates: {args.min_count_in_candidates}",
@@ -87,7 +89,7 @@ def main() -> None:
         f"protlist.stranno.tsv: {args.protlist_stranno_output}",
         f"All enrichment CSV: {args.all_enrichment_csv_output}",
         f"Significant enrichment CSV: {args.sig_enrichment_csv_output}",
-        f"Candidate proteins: {protlist_count}",
+        f"Candidate IDs: {protlist_count}",
         f"Annotation rows for candidates: {stranno_rows}",
         f"All enrichment rows: {all_rows}",
         f"Significant enrichment rows: {sig_rows}",

@@ -6,11 +6,13 @@ usage() {
   cat <<'EOF'
 Usage:
   candidate_gene_extraction.sh \
+    --species <maize|wheat|rice> \
     --bed <locilist.bed> \
     --ld-distance <50000> \
     --gene-bed <allV4gene.bed> \
     --extended-bed-output <locilist.extend.bed> \
     --gene-list-output <genelist.txt> \
+    --detailed-output <genelist.detailed.tsv> \
     --summary-output <summary.txt> \
     --summary-script <summarize_candidate_gene_extraction.py>
 
@@ -18,6 +20,7 @@ Required tools:
   bedtools
   python3
   awk
+  sort
 
 Environment:
   Run inside EasyGS_2 or with:
@@ -25,21 +28,25 @@ Environment:
 EOF
 }
 
+species=""
 bed=""
 ld_distance=""
 gene_bed=""
 extended_bed_output=""
 gene_list_output=""
+detailed_output=""
 summary_output=""
 summary_script=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --species) species="$2"; shift 2 ;;
     --bed) bed="$2"; shift 2 ;;
     --ld-distance) ld_distance="$2"; shift 2 ;;
     --gene-bed) gene_bed="$2"; shift 2 ;;
     --extended-bed-output) extended_bed_output="$2"; shift 2 ;;
     --gene-list-output) gene_list_output="$2"; shift 2 ;;
+    --detailed-output) detailed_output="$2"; shift 2 ;;
     --summary-output) summary_output="$2"; shift 2 ;;
     --summary-script) summary_script="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -48,11 +55,13 @@ while [ "$#" -gt 0 ]; do
 done
 
 for required in \
+  "$species" \
   "$bed" \
   "$ld_distance" \
   "$gene_bed" \
   "$extended_bed_output" \
   "$gene_list_output" \
+  "$detailed_output" \
   "$summary_output" \
   "$summary_script"
 do
@@ -63,7 +72,7 @@ do
   fi
 done
 
-for tool in bedtools python3 awk; do
+for tool in bedtools python3 awk sort; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "Required tool not found on PATH: $tool" >&2
     exit 1
@@ -85,28 +94,35 @@ fi
 
 mkdir -p "$(dirname "$extended_bed_output")"
 mkdir -p "$(dirname "$gene_list_output")"
+mkdir -p "$(dirname "$detailed_output")"
 mkdir -p "$(dirname "$summary_output")"
 
+echo "物种: ${species}"
 echo "使用LD距离: ${ld_distance}bp 进行位点区间扩展..."
 
-awk -v OFS='\t' -v ld="$ld_distance" '{
+awk -v OFS='\t' -v ld="$ld_distance" 'NF >= 3 && $0 !~ /^#/ {
   start = $2 - ld;
   if (start < 0) start = 0;
   print $1, start, $3 + ld
 }' "$bed" > "$extended_bed_output"
 
 bedtools intersect -a "$extended_bed_output" -b "$gene_bed" -wa -wb \
-  | awk 'BEGIN{FS=OFS="\t"} NF >= 7 {print $7}' \
-  | awk '!seen[$0]++' > "$gene_list_output"
+  > "$detailed_output"
+
+awk 'BEGIN{FS=OFS="\t"} NF >= 7 {print $7}' "$detailed_output" \
+  | LC_ALL=C sort -u > "$gene_list_output"
 
 python3 "$summary_script" \
+  --species "$species" \
   --bed "$bed" \
   --ld-distance "$ld_distance" \
   --gene-bed "$gene_bed" \
   --extended-bed-output "$extended_bed_output" \
   --gene-list-output "$gene_list_output" \
+  --detailed-output "$detailed_output" \
   --summary-output "$summary_output"
 
 echo "操作完成。候选基因列表已保存至: $gene_list_output"
 echo "Extended BED: $extended_bed_output"
+echo "Detailed matches: $detailed_output"
 echo "Summary file: $summary_output"

@@ -187,11 +187,26 @@ class LiteLLMProvider(LLMProvider):
         
         usage = {}
         if hasattr(response, "usage") and response.usage:  # 提取token的使用信息
-            usage = {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens,
-            }
+            raw_usage = response.usage
+            if isinstance(raw_usage, dict):
+                usage_source = raw_usage
+            else:
+                model_dump = getattr(raw_usage, "model_dump", None)
+                usage_source = model_dump() if callable(model_dump) else {}
+            for key in (
+                "prompt_tokens",
+                "completion_tokens",
+                "total_tokens",
+                "input_tokens",
+                "output_tokens",
+                "cache_read_input_tokens",
+                "cache_creation_input_tokens",
+            ):
+                value = usage_source.get(key) if isinstance(usage_source, dict) else None
+                if value is None:
+                    value = getattr(raw_usage, key, None)
+                if value is not None:
+                    usage[key] = value
         
         reasoning_content = getattr(message, "reasoning_content", None)  # 获取思维链内容
         

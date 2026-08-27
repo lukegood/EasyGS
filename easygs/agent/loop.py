@@ -4,13 +4,14 @@ import asyncio
 import json
 from pathlib import Path
 import re
+import time
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from easygs.bus.events import InboundMessage, OutboundMessage
 from easygs.bus.queue import MessageBus
-from easygs.providers.base import LLMProvider
+from easygs.providers.base import LLMProvider, TokenUsageAccumulator
 from easygs.agent.context import ContextBuilder
 from easygs.agent.tools.workflows import (
     AddWorkflowMessageTool,
@@ -285,17 +286,74 @@ class AgentLoop:
             if callable(set_context):
                 set_context(channel, chat_id)
 
+    def _set_workflow_metrics_context(
+        self,
+        task_started_at_ms: int,
+        usage: TokenUsageAccumulator,
+    ) -> None:
+        metrics = {
+            "task_started_at_ms": task_started_at_ms,
+            "input_tokens": usage.input_tokens,
+            "output_tokens": usage.output_tokens,
+            "llm_call_count": usage.llm_call_count,
+            "usage_reported_call_count": usage.usage_reported_call_count,
+        }
+        for tool in self.tools.iter_tools():
+            set_task_metrics = getattr(tool, "set_task_metrics", None)
+            if callable(set_task_metrics):
+                set_task_metrics(metrics)
+
     @staticmethod
-    def _looks_like_workflow_submitted_text(content: str) -> bool:
+    def _extract_workflow_ids(value: Any) -> set[str]:
+        """Return normalized workflow IDs present in a string-like value."""
+        if value is None:
+            return set()
+        text = (
+            value
+            if isinstance(value, str)
+            else json.dumps(value, ensure_ascii=False, default=str)
+        )
+        return {
+            match.group(0).lower()
+            for match in re.finditer(r"\bwf_[0-9a-f]{8}\b", text, flags=re.IGNORECASE)
+        }
+
+    def _unverified_workflow_ids(
+        self,
+        content: str,
+        observed_workflow_ids: set[str],
+    ) -> set[str]:
+        """Find response IDs that came from neither this turn nor the workflow store."""
+        unverified: set[str] = set()
+        for workflow_id in self._extract_workflow_ids(content):
+            if workflow_id in observed_workflow_ids:
+                continue
+            try:
+                exists = self.workflows.get_workflow(workflow_id) is not None
+            except Exception as exc:
+                logger.warning(
+                    f"workflow ID verification failed for {workflow_id}: {exc}"
+                )
+                exists = False
+            if not exists:
+                unverified.add(workflow_id)
+        return unverified
+
+    @staticmethod
+    def _looks_like_workflow_cancelled_text(content: str) -> bool:
+        """Return whether the response claims that a specific workflow was cancelled."""
         text = (content or "").strip()
-        if not text:
+        if not text or not re.search(r"\bwf_[0-9a-f]{8}\b", text.lower()):
             return False
-        lowered = text.lower()
-        if "background workflow submitted:" in lowered:
-            return True
-        if not re.search(r"\bwf_[0-9a-f]{8}\b", lowered):
-            return False
-        return "workflow" in lowered and "submitted" in lowered
+        return any(
+            re.search(pattern, text, flags=re.IGNORECASE) is not None
+            for pattern in (
+                r"(?:^|\n)\s*(?:已(?:经)?(?:成功)?|成功|刚刚(?:成功)?)取消(?:了)?(?:后台)?工作流",
+                r"(?:^|\n)\s*(?:已(?:经)?(?:成功)?|成功|刚刚(?:成功)?)取消(?:了)?\s*`?wf_",
+                r"(?:^|\n)\s*(?:background\s+)?workflow\s+`?wf_[0-9a-f]{8}`?\s+(?:was\s+|has\s+been\s+)?cancell?ed\b",
+                r"(?:^|\n)\s*(?:successfully\s+)?cancell?ed\s+(?:the\s+)?(?:background\s+)?workflow\b",
+            )
+        )
 
     def _submit_workflow_tool_defs(self) -> list[dict[str, Any]]:
         """Return only the submit_workflow tool definition."""
@@ -306,10 +364,21 @@ class AgentLoop:
                 submit_defs.append(tool_def)
         return submit_defs
 
+    def _cancel_workflow_tool_defs(self) -> list[dict[str, Any]]:
+        """Return only the cancel_workflow tool definition."""
+        cancel_defs: list[dict[str, Any]] = []
+        for tool_def in self.tools.get_definitions():
+            fn = tool_def.get("function")
+            if isinstance(fn, dict) and fn.get("name") == "cancel_workflow":
+                cancel_defs.append(tool_def)
+        return cancel_defs
+
     async def _retry_submit_workflow_once(
         self,
         *,
         messages: list[dict[str, Any]],
+        task_started_at_ms: int,
+        usage: TokenUsageAccumulator,
     ) -> tuple[str | None, dict[str, Any], list[str]]:
         """Retry once by forcing a real submit_workflow tool call."""
         submit_tool_defs = self._submit_workflow_tool_defs()
@@ -335,6 +404,8 @@ class AgentLoop:
             temperature=self.temperature,
             reasoning_effort=self.reasoning_effort,
         )
+        usage.add(response.usage)
+        self._set_workflow_metrics_context(task_started_at_ms, usage)
         if not response.has_tool_calls:
             return None, {}, []
 
@@ -352,6 +423,59 @@ class AgentLoop:
             return execution.content, retry_metadata, retry_tools_used
         return None, {}, []
 
+    async def _retry_cancel_workflow_once(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        usage: TokenUsageAccumulator,
+    ) -> tuple[str | None, list[str]]:
+        """Retry once with only cancel_workflow, requiring an explicit workflow ID."""
+        cancel_tool_defs = self._cancel_workflow_tool_defs()
+        if not cancel_tool_defs:
+            return None, []
+
+        retry_messages = list(messages)
+        retry_messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "Do not output a textual workflow cancellation confirmation. "
+                    "Call the cancel_workflow tool now to actually cancel the specific "
+                    "workflow ID from the user's request. The tool call must include that "
+                    "explicit workflow_id; do not cancel an implicit or inferred workflow."
+                ),
+            }
+        )
+
+        response = await self.provider.chat(
+            messages=retry_messages,
+            tools=cancel_tool_defs,
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            reasoning_effort=self.reasoning_effort,
+        )
+        usage.add(response.usage)
+        if not response.has_tool_calls:
+            return None, []
+
+        for tool_call in response.tool_calls:
+            if tool_call.name != "cancel_workflow":
+                continue
+            workflow_id = tool_call.arguments.get("workflow_id")
+            if not isinstance(workflow_id, str) or not re.fullmatch(
+                r"wf_[0-9a-f]{8}", workflow_id.strip(), flags=re.IGNORECASE
+            ):
+                logger.warning(
+                    "workflow cancel retry rejected: explicit workflow_id was not provided"
+                )
+                continue
+            args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+            logger.info(f"Workflow cancel retry tool call: {tool_call.name}({args_str[:200]})")
+            execution = await self.tools.execute_detailed(tool_call.name, tool_call.arguments)
+            return execution.content, [tool_call.name]
+        return None, []
+
     async def _process_message(self, msg: InboundMessage, session_key: str | None = None) -> OutboundMessage | None:
         """
         Process a single inbound message.
@@ -367,6 +491,9 @@ class AgentLoop:
         # The chat_id contains the original "channel:chat_id" to route back to
         if msg.channel == "system":  # 系统消息判断
             return await self._process_system_message(msg)  # 回报子agent的消息
+
+        task_started_at_ms = int(time.time() * 1000)
+        task_usage = TokenUsageAccumulator()
         
         preview = msg.content[:80] + "..." if len(msg.content) > 80 else msg.content  # 日志中输出前80个字
         logger.info(f"Processing message from {msg.channel}:{msg.sender_id}: {preview}")
@@ -395,7 +522,7 @@ class AgentLoop:
         
         # Consolidate memory before processing if session is too large
         if not self.research_mode and len(session.messages) > self.memory_window:  # 如果当前session的消息数量超过记忆窗口了，则利用大模型压缩记忆
-            await self._consolidate_memory(session)  # 利用大模型压缩记忆
+            await self._consolidate_memory(session, usage=task_usage)  # 利用大模型压缩记忆
         
         self._set_tool_contexts(msg.channel, msg.chat_id)
         
@@ -413,6 +540,7 @@ class AgentLoop:
         final_content = None
         final_metadata: dict[str, Any] = {}
         tools_used: list[str] = []
+        observed_workflow_ids = self._extract_workflow_ids(msg.content)
         
         while iteration < self.max_iterations:  # 最多 max_iterations 轮
             iteration += 1
@@ -426,6 +554,8 @@ class AgentLoop:
                 temperature=self.temperature,
                 reasoning_effort=self.reasoning_effort,
             )
+            task_usage.add(response.usage)
+            self._set_workflow_metrics_context(task_started_at_ms, task_usage)
             
             # Handle tool calls
             if response.has_tool_calls:  # 判断是否有工具调用
@@ -449,10 +579,17 @@ class AgentLoop:
                 # Execute tools  逐个执行工具调用
                 for tool_call in response.tool_calls:
                     tools_used.append(tool_call.name)  # 加入使用列表
+                    observed_workflow_ids.update(
+                        self._extract_workflow_ids(tool_call.arguments)
+                    )
                     args_str = json.dumps(tool_call.arguments, ensure_ascii=False)  # 参数
                     logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")  # 调用工具
                     execution = await self.tools.execute_detailed(tool_call.name, tool_call.arguments)
                     result = execution.content
+                    observed_workflow_ids.update(self._extract_workflow_ids(result))
+                    observed_workflow_ids.update(
+                        self._extract_workflow_ids(execution.metadata)
+                    )
                     messages = self.context.add_tool_result(  # message中增加工具调用的结果
                         messages, tool_call.id, tool_call.name, result
                     )
@@ -477,14 +614,24 @@ class AgentLoop:
             else:
                 final_content = "I've completed processing but have no response to give."
 
-        # Guardrail: avoid fake workflow submission text when submit_workflow was never called.
+        # Guardrail: reject workflow IDs invented outside user/tool/store provenance.
+        unverified_workflow_ids = self._unverified_workflow_ids(
+            final_content,
+            observed_workflow_ids,
+        )
+
         if (
-            self._looks_like_workflow_submitted_text(final_content)
+            unverified_workflow_ids
             and "submit_workflow" not in tools_used
         ):
-            logger.warning("workflow submit retry triggered: textual submission without submit_workflow call")
+            logger.warning(
+                "workflow submit retry triggered: unverified workflow ID without tool call; "
+                f"unverified_ids={sorted(unverified_workflow_ids)}"
+            )
             retry_content, retry_metadata, retry_tools_used = await self._retry_submit_workflow_once(
-                messages=messages
+                messages=messages,
+                task_started_at_ms=task_started_at_ms,
+                usage=task_usage,
             )
             if retry_content:
                 final_content = retry_content
@@ -496,6 +643,24 @@ class AgentLoop:
             else:
                 final_content = "后台工作流创建失败，请重试。"
                 logger.warning("workflow submit retry failed")
+
+        # Guardrail: avoid fake cancellation claims when cancel_workflow was never called.
+        if (
+            self._looks_like_workflow_cancelled_text(final_content)
+            and "cancel_workflow" not in tools_used
+        ):
+            logger.warning("workflow cancel retry triggered: textual claim without tool call")
+            retry_content, retry_tools_used = await self._retry_cancel_workflow_once(
+                messages=messages,
+                usage=task_usage,
+            )
+            if retry_content:
+                final_content = retry_content
+                tools_used.extend(retry_tools_used)
+                logger.info("workflow cancel retry succeeded")
+            else:
+                final_content = "工作流取消未执行，请重试。"
+                logger.warning("workflow cancel retry failed")
         
         # Log response preview
         preview = final_content[:120] + "..." if len(final_content) > 120 else final_content  # 大模型恢复预览
@@ -558,6 +723,9 @@ class AgentLoop:
                 reasoning_effort=self.reasoning_effort,
             )
             final_content = (response.content or "Background task updated.").strip()
+            resource_usage = str(metadata.get("resource_usage") or "").strip()
+            if resource_usage and "Input tokens:" not in final_content:
+                final_content = f"{final_content}\n\n{resource_usage}"
             session.add_message("user", f"[System: {msg.sender_id}] {msg.content}")
             session.add_message("assistant", final_content)
             self.sessions.save(session)
@@ -683,7 +851,12 @@ class AgentLoop:
                 e,
             )
     
-    async def _consolidate_memory(self, session, archive_all: bool = False) -> None:
+    async def _consolidate_memory(
+        self,
+        session,
+        archive_all: bool = False,
+        usage: TokenUsageAccumulator | None = None,
+    ) -> None:
         """Consolidate old messages into MEMORY.md + HISTORY.md, then trim session."""
         if self.research_mode:  # 在research模式下，不需要压缩
             logger.info("AgentLoop._consolidate_memory skipped because research_mode is enabled: {}", session.key)
@@ -735,6 +908,8 @@ Respond with ONLY valid JSON, no markdown fences."""
                 max_tokens=self.max_tokens,
                 reasoning_effort=self.reasoning_effort,
             )
+            if usage is not None:
+                usage.add(response.usage)
             text = (response.content or "").strip()  # 获取回复并且去空白
             if text.startswith("```"):  # 处理markdown块的包裹
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()

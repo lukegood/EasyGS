@@ -268,10 +268,54 @@ def onboard():  # 初始化用户的easygs配置和工作区
         resources_root.mkdir(parents=True, exist_ok=True)
         console.print(f"[green]✓[/green] Created resources directory at {resources_root}")
 
+    fastq_to_vcf_resource_dir = resolve_user_resource_path("fastq_to_vcf_analysis")
+    if not fastq_to_vcf_resource_dir.exists():
+        fastq_to_vcf_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created FASTQ-to-VCF resources directory at "
+            f"{fastq_to_vcf_resource_dir}"
+        )
+
+    candidate_gene_resource_dir = resolve_user_resource_path(
+        "candidate_gene_extraction_analysis"
+    )
+    if not candidate_gene_resource_dir.exists():
+        candidate_gene_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created candidate-gene resources directory at "
+            f"{candidate_gene_resource_dir}"
+        )
+
     pfam_resource_dir = resolve_user_resource_path("pfam_enrichment_analysis")
     if not pfam_resource_dir.exists():
         pfam_resource_dir.mkdir(parents=True, exist_ok=True)
         console.print(f"[green]✓[/green] Created PFAM resources directory at {pfam_resource_dir}")
+
+    peak_annotation_resource_dir = resolve_user_resource_path("peak_annotation_analysis")
+    if not peak_annotation_resource_dir.exists():
+        peak_annotation_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created peak-annotation resources directory at "
+            f"{peak_annotation_resource_dir}"
+        )
+
+    ortholog_resource_dir = resolve_user_resource_path("ortholog_extraction_analysis")
+    if not ortholog_resource_dir.exists():
+        ortholog_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created ortholog resources directory at "
+            f"{ortholog_resource_dir}"
+        )
+
+    gene_enrichment_resource_dir = resolve_user_resource_path(
+        "wheat_rice_gene_function_enrichment_analysis"
+    )
+    if not gene_enrichment_resource_dir.exists():
+        gene_enrichment_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created wheat/rice gene-function resources directory at "
+            f"{gene_enrichment_resource_dir}"
+        )
     
     # Create default bootstrap files  创建工作区的一系列模板文件
     _create_workspace_templates(workspace)

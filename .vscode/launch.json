@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "EasyGS: Gateway",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/scripts/debug_easygs.py",
+      "args": [
+        "gateway",
+        "--port",
+        "18790",
+        "--verbose",
+        "--research-mode"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "subProcess": false,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    }
+  ]
+}
