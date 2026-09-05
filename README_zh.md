@@ -343,7 +343,7 @@ curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh |
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-  bash -s -- --image <registry>/<namespace>/easygs:analysis
+  bash -s -- --image cloudcollector/easygs:latest
 ```
 
 无人值守服务器或 CI 可使用 `--non-interactive`；如果同时允许安装缺失的宿主机依赖：

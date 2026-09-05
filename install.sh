@@ -63,7 +63,7 @@ Environment equivalents:
 Examples:
   curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | bash
   curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-    bash -s -- --image ghcr.io/lukegood/easygs:latest
+    bash -s -- --image cloudcollector/easygs:latest
   curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
     bash -s -- --install-deps --non-interactive
 EOF

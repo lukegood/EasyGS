@@ -101,7 +101,7 @@ pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.9/easygs-0
 You can also open the release page and download the wheel manually:
 
 - Latest release: <https://github.com/lukegood/EasyGS/releases/latest>
-- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.9-py3-none-any.whl>
+- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.9/easygs-0.1.9-py3-none-any.whl>
 
 After downloading the file, install it with:
 
@@ -344,7 +344,7 @@ After a public image is published, the same installer can skip the local build:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-  bash -s -- --image <registry>/<namespace>/easygs:analysis
+  bash -s -- --image cloudcollector/easygs:latest
 ```
 
 For unattended servers or CI, use `--non-interactive`. To also allow installation of missing host dependencies:
