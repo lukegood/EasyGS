@@ -121,8 +121,7 @@ External resources are not bundled into the image. Put resources under:
 container/easygs-home/resources
 ```
 
-For maize B73 v4 FASTQ-to-VCF analysis, place the reference and its indexes
-under:
+For the default maize B73 v4 FASTQ-to-VCF analysis, place the reference under:
 
 ```text
 container/easygs-home/resources/fastq_to_vcf_analysis/
@@ -136,10 +135,23 @@ container/easygs-home/resources/fastq_to_vcf_analysis/
 └── Zm-B73-REFERENCE-GRAMENE-4.0.dict
 ```
 
+Only the FASTA is required. Existing indexes are reused when present; missing BWA indexes,
+FASTA index, and sequence dictionary are generated inside the workflow project under
+`00-Reference/`. To use another diploid reference assembly, pass `reference_fasta` with a path
+visible inside the container, such as `/data/reference/genome.fa`. An optional `sample_sheet`
+TSV with `sample_id`, `r1`, and `r2` columns supports paired FASTQs with arbitrary filenames.
+
 For maize/wheat/rice candidate-gene extraction, place the three species gene BED resources under:
 
 ```text
 container/easygs-home/resources/candidate_gene_extraction_analysis/
+```
+
+For maize/wheat/rice genebody locus annotation, place the three real species gene BED resources
+under (symbolic links are rejected):
+
+```text
+container/easygs-home/resources/genebody_locus_annotation_analysis/
 ```
 
 For wheat/rice offline GO/KEGG enrichment, place the seven required mapping and

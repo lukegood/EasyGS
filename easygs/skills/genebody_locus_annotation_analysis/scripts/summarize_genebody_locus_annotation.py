@@ -10,6 +10,7 @@ from pathlib import Path
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize genebody locus annotation outputs.")
     parser.add_argument("--locus-list", required=True)
+    parser.add_argument("--species", required=True, choices=("maize", "wheat", "rice"))
     parser.add_argument("--gene-bed", required=True)
     parser.add_argument("--site-gene-output", required=True)
     parser.add_argument("--gene-output", required=True)
@@ -42,8 +43,9 @@ def main() -> int:
 
     lines = [
         "=== Genebody Locus Annotation ===",
+        f"Species: {args.species}",
         f"Locus list: {locus_path}",
-        f"Built-in gene BED: {args.gene_bed}",
+        f"Gene BED resource: {args.gene_bed}",
         f"Site-gene output: {site_gene_path}",
         f"Gene output: {gene_path}",
         f"Input loci: {len(loci)}",

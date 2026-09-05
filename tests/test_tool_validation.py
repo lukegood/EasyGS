@@ -1,4 +1,6 @@
 import asyncio
+import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -11,6 +13,7 @@ from easygs.agent.loop import AgentLoop
 from easygs.agent.tools.base import Tool
 from easygs.agent.tools.candidate_gene_extraction import RunCandidateGeneExtractionTool
 from easygs.agent.tools.fastq_to_vcf import RunFastqToVcfTool
+from easygs.agent.tools.genebody_locus_annotation import RunGenebodyLocusAnnotationTool
 from easygs.agent.tools.heritability import RunHeritabilityTool
 from easygs.agent.tools.ortholog_extraction import RunOrthologExtractionTool
 from easygs.agent.tools.peak_annotation import RunPeakAnnotationTool
@@ -71,8 +74,13 @@ FASTQ_TO_VCF_RESOURCE_FILENAMES = (
     "Zm-B73-REFERENCE-GRAMENE-4.0.fa.fai",
     "Zm-B73-REFERENCE-GRAMENE-4.0.dict",
 )
-
-
+FASTQ_TO_VCF_SCRIPTS_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "easygs"
+    / "skills"
+    / "fastq_to_vcf_analysis"
+    / "scripts"
+)
 def test_ccload_usage_counts_cached_input_exactly_once() -> None:
     assert normalize_token_usage(
         {
@@ -631,6 +639,16 @@ def test_large_pfam_resources_are_not_bundled() -> None:
         assert not path.is_symlink()
 
 
+def test_genebody_gene_beds_are_not_bundled() -> None:
+    bundled_resource = (
+        Path(__file__).resolve().parents[1]
+        / "easygs/skills/genebody_locus_annotation_analysis/scripts/allV4gene.bed"
+    )
+
+    assert not bundled_resource.exists()
+    assert not bundled_resource.is_symlink()
+
+
 def test_git_index_has_no_external_symlinks() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
@@ -658,6 +676,157 @@ def test_git_index_has_no_external_symlinks() -> None:
 
 async def _fake_environment_status(required_tools):
     return {"launcher": "/usr/bin/conda", "error": ""}
+
+
+def _write_genebody_resources(resources_root: Path) -> dict[str, Path]:
+    resource_dir = resources_root / "genebody_locus_annotation_analysis"
+    resource_dir.mkdir(parents=True, exist_ok=True)
+    contents = {
+        "maize": ("allV4gene.bed", "1\t100\t200\tZm00001d000001\n"),
+        "wheat": ("allwheatgene.bed", "Chr1A\t100\t200\tTraesCS1A03G0000200\n"),
+        "rice": ("allricegene.bed", "Chr1\t100\t200\tLOC_Os01g01010\n"),
+    }
+    paths = {}
+    for species, (filename, content) in contents.items():
+        path = resource_dir / filename
+        path.write_text(content, encoding="utf-8")
+        paths[species] = path
+    return paths
+
+
+def test_genebody_schema_exposes_species_and_hides_gene_bed(tmp_path) -> None:
+    schema = RunGenebodyLocusAnnotationTool(tmp_path).parameters
+    properties = schema["properties"]
+
+    assert properties["species"]["enum"] == ["maize", "wheat", "rice"]
+    assert properties["species"]["default"] == "maize"
+    assert "gene_bed" not in properties
+    assert schema["required"] == ["locus_list"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("species", "locus", "filename"),
+    [
+        ("maize", "chr1.s_150", "allV4gene.bed"),
+        ("wheat", "chr1A.s_150", "allwheatgene.bed"),
+        ("rice", "1.s_150", "allricegene.bed"),
+    ],
+)
+async def test_genebody_selects_species_resource_and_normalizes_chromosomes(
+    monkeypatch,
+    tmp_path,
+    species,
+    locus,
+    filename,
+) -> None:
+    resources_root = tmp_path / "resources"
+    _write_genebody_resources(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    locus_list = tmp_path / "loci.txt"
+    locus_list.write_text(f"{locus}\n", encoding="utf-8")
+    output_dir = tmp_path / "results"
+
+    tool = RunGenebodyLocusAnnotationTool(tmp_path)
+    monkeypatch.setattr(tool, "_get_environment_status", _fake_environment_status)
+    prepared = await tool.prepare_run(
+        locus_list=str(locus_list),
+        species=species.upper(),
+        output_dir=str(output_dir),
+    )
+
+    expected_resource = resources_root / "genebody_locus_annotation_analysis" / filename
+    assert prepared.species == species
+    assert prepared.gene_bed_path == expected_resource
+    assert prepared.site_gene_path == output_dir / "位于genebody的位点及其对应的基因.txt"
+    assert prepared.gene_list_path == output_dir / "位于genebody的基因.txt"
+    assert prepared.summary_path == output_dir / "genebody_locus_annotation_summary.txt"
+    assert str(expected_resource) in prepared.command
+    assert prepared.command[prepared.command.index("--species") + 1] == species
+
+
+@pytest.mark.asyncio
+async def test_genebody_rejects_unknown_species(tmp_path) -> None:
+    with pytest.raises(ValueError, match="species must be one of"):
+        await RunGenebodyLocusAnnotationTool(tmp_path).prepare_run(
+            locus_list="unused.txt",
+            species="barley",
+        )
+
+
+@pytest.mark.asyncio
+async def test_genebody_validates_all_locus_rows(monkeypatch, tmp_path) -> None:
+    resources_root = tmp_path / "resources"
+    _write_genebody_resources(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    locus_list = tmp_path / "loci.txt"
+    locus_list.write_text("chr1.s_150\n" * 5 + "invalid_locus\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="line 6"):
+        await RunGenebodyLocusAnnotationTool(tmp_path).prepare_run(
+            locus_list=str(locus_list),
+            species="maize",
+        )
+
+
+@pytest.mark.asyncio
+async def test_genebody_rejects_chromosome_mismatch(monkeypatch, tmp_path) -> None:
+    resources_root = tmp_path / "resources"
+    _write_genebody_resources(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    locus_list = tmp_path / "loci.txt"
+    locus_list.write_text("Chr1A.s_150\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="do not match the selected species gene BED"):
+        await RunGenebodyLocusAnnotationTool(tmp_path).prepare_run(
+            locus_list=str(locus_list),
+            species="rice",
+        )
+
+
+@pytest.mark.asyncio
+async def test_genebody_rejects_chromosome_suffix_case_mismatch(monkeypatch, tmp_path) -> None:
+    resources_root = tmp_path / "resources"
+    _write_genebody_resources(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    locus_list = tmp_path / "loci.txt"
+    locus_list.write_text("chr1a.s_150\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Missing from gene BED: 1a"):
+        await RunGenebodyLocusAnnotationTool(tmp_path).prepare_run(
+            locus_list=str(locus_list),
+            species="wheat",
+        )
+
+
+@pytest.mark.asyncio
+async def test_genebody_rejects_symbolic_link_resource(monkeypatch, tmp_path) -> None:
+    resources_root = tmp_path / "resources"
+    paths = _write_genebody_resources(resources_root)
+    rice_path = paths["rice"]
+    target_path = tmp_path / "rice-real.bed"
+    rice_path.replace(target_path)
+    rice_path.symlink_to(target_path)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    locus_list = tmp_path / "loci.txt"
+    locus_list.write_text("Chr1.s_150\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="real file, not a symbolic link"):
+        await RunGenebodyLocusAnnotationTool(tmp_path).prepare_run(
+            locus_list=str(locus_list),
+            species="rice",
+        )
+
+
+@pytest.mark.asyncio
+async def test_genebody_execute_rejects_public_gene_bed(tmp_path) -> None:
+    result = await RunGenebodyLocusAnnotationTool(tmp_path).execute(
+        locus_list="unused.txt",
+        species="wheat",
+        gene_bed="allwheatgene.bed",
+    )
+
+    assert "gene_bed is not a public parameter" in result
 
 
 def _write_candidate_gene_resources(resources_root: Path) -> dict[str, Path]:
@@ -1463,19 +1632,289 @@ def _write_fastq_pairs(fastq_dir: Path, sample_ids: list[str]) -> None:
         (fastq_dir / f"{sample_id}_2.fq.gz").write_bytes(b"test")
 
 
-def test_fastq_to_vcf_schema_hides_internal_resource_paths(tmp_path) -> None:
+def _load_fastq_script_module(name: str):
+    path = FASTQ_TO_VCF_SCRIPTS_DIR / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"easygs_test_{name}", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_fastq_filter_supports_phased_and_multiallelic_diploid_genotypes() -> None:
+    module = _load_fastq_script_module("filter_genotype")
+    source = io.StringIO(
+        "##fileformat=VCFv4.2\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t"
+        "phased\tmultiallelic\tlow_alt\n"
+        "1\t10\t.\tA\tC,G\t.\tPASS\t.\tGT:AD:DP\t"
+        "0|1:6,6,0:12\t1/2:0,5,5:10\t0/2:5,0,3:8\n"
+    )
+    output = io.StringIO()
+
+    module.process_vcf(source, output, min_depth=5, min_allele_depth=4)
+
+    result = output.getvalue()
+    assert "0|1:6,6,0:12" in result
+    assert "1/2:0,5,5:10" in result
+    assert "./.:5,0,3:8" in result
+
+
+def test_fastq_filter_removes_sites_when_every_genotype_is_masked() -> None:
+    module = _load_fastq_script_module("filter_genotype")
+    source = io.StringIO(
+        "##fileformat=VCFv4.2\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts1\ts2\n"
+        "1\t10\t.\tA\tC\t.\tPASS\t.\tGT:AD:DP\t0/1:3,3:6\t0/0:5,0:4\n"
+    )
+    output = io.StringIO()
+
+    module.process_vcf(source, output, min_depth=5, min_allele_depth=4)
+
+    assert "\n1\t10\t" not in output.getvalue()
+
+
+def test_fastq_zero_filter_thresholds_disable_depth_masking() -> None:
+    module = _load_fastq_script_module("filter_genotype")
+    source = io.StringIO(
+        "##fileformat=VCFv4.2\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts1\n"
+        "1\t10\t.\tA\tC\t.\tPASS\t.\tGT:AD:DP\t0/1:.:.\n"
+    )
+    output = io.StringIO()
+
+    module.process_vcf(source, output, min_depth=0, min_allele_depth=0)
+
+    assert "0/1:.:." in output.getvalue()
+
+
+def test_fastq_statistics_calculates_true_multiallelic_minor_frequency() -> None:
+    module = _load_fastq_script_module("snp_stats")
+    source = io.StringIO(
+        "##fileformat=VCFv4.2\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts1\ts2\n"
+        "1\t10\t.\tA\tC,G\t.\tPASS\t.\tGT\t1/1\t1/2\n"
+    )
+    stats = io.StringIO()
+    genotypes = io.StringIO()
+
+    module._write_tables(source, stats, genotypes)
+
+    row = stats.getvalue().splitlines()[1].split("\t")
+    assert row[-1] == "0.2500"
+    assert genotypes.getvalue().splitlines()[1].endswith("\tCC\tCG")
+
+
+def _write_fastq_fake_executable(path: Path, content: str) -> None:
+    path.write_text("#!/bin/bash\nset -euo pipefail\n" + content, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _write_fake_fastq_pipeline_tools(bin_dir: Path) -> None:
+    bin_dir.mkdir()
+    _write_fastq_fake_executable(
+        bin_dir / "fastp",
+        """
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o|-O|--html|--json) mkdir -p "$(dirname "$2")"; : > "$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "bwa",
+        """
+if [ "$1" = "index" ]; then
+  for suffix in amb ann bwt pac sa; do : > "$2.$suffix"; done
+else
+  printf '@HD\\tVN:1.6\\n'
+fi
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "samtools",
+        """
+subcommand="$1"; shift
+case "$subcommand" in
+  faidx) : > "$1.fai" ;;
+  view) cat >/dev/null; printf 'BAM\\n' ;;
+  sort)
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "-o" ]; then output="$2"; shift 2; else shift; fi
+    done
+    : > "$output"
+    ;;
+  index) target="${@: -1}"; : > "$target.bai" ;;
+esac
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "picard",
+        """
+for argument in "$@"; do
+  case "$argument" in
+    O=*) output="${argument#O=}" ;;
+    M=*) metrics="${argument#M=}" ;;
+  esac
+done
+: > "$output"
+if [ -n "${metrics:-}" ]; then : > "$metrics"; fi
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "gatk",
+        """
+subcommand="$1"; shift
+printf '%s %s\\n' "$subcommand" "$*" >> "$FAKE_GATK_LOG"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "-O" ]; then output="$2"; shift 2; else shift; fi
+done
+printf 'mock-vcf\\n' > "$output"
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "tabix",
+        """
+target="${@: -1}"
+: > "$target.tbi"
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "bgzip",
+        """
+target="${@: -1}"
+cp "$target" "$target.gz"
+""",
+    )
+    _write_fastq_fake_executable(
+        bin_dir / "python3",
+        """
+script="$1"; shift
+case "$(basename "$script")" in
+  filter_genotype.py) cp "$1" "$2" ;;
+  snp_stats.py) : > "$2"; : > "$3" ;;
+  summarize_fastq_to_vcf.py)
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--output" ]; then output="$2"; shift 2; else shift; fi
+    done
+    printf 'summary\\n' > "$output"
+    ;;
+esac
+""",
+    )
+
+
+def test_fastq_shell_prepares_reference_and_excludes_stale_gvcfs(tmp_path) -> None:
+    fake_bin = tmp_path / "bin"
+    _write_fake_fastq_pipeline_tools(fake_bin)
+    reads = tmp_path / "reads"
+    reads.mkdir()
+    (reads / "sample_R1.fastq.gz").write_bytes(b"r1")
+    (reads / "sample_R2.fastq.gz").write_bytes(b"r2")
+    sample_sheet = tmp_path / "samples.tsv"
+    sample_sheet.write_text(
+        "sample_id\tr1\tr2\n"
+        "sample-A\treads/sample_R1.fastq.gz\treads/sample_R2.fastq.gz\n",
+        encoding="utf-8",
+    )
+    reference = tmp_path / "custom.fa"
+    reference.write_text(">chr1\nACGT\n", encoding="utf-8")
+    project = tmp_path / "result" / "project-A"
+    variant_dir = project / "03-VariantCalling"
+    variant_dir.mkdir(parents=True)
+    (variant_dir / "stale-sample.g.vcf.gz").write_bytes(b"stale")
+    gatk_log = tmp_path / "gatk.log"
+    script = FASTQ_TO_VCF_SCRIPTS_DIR / "fastq_to_vcf.sh"
+    filter_script = FASTQ_TO_VCF_SCRIPTS_DIR / "filter_genotype.py"
+    stats_script = FASTQ_TO_VCF_SCRIPTS_DIR / "snp_stats.py"
+    summary_script = FASTQ_TO_VCF_SCRIPTS_DIR / "summarize_fastq_to_vcf.py"
+    summary = project / "project-A_summary.txt"
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:/usr/bin:/bin"
+    env["FAKE_GATK_LOG"] = str(gatk_log)
+    command = [
+        "bash",
+        str(script),
+        "--fastq-dir",
+        str(reads),
+        "--project-id",
+        "project-A",
+        "--reference-fasta",
+        str(reference),
+        "--filter-script",
+        str(filter_script),
+        "--stats-script",
+        str(stats_script),
+        "--output-dir",
+        str(project),
+        "--threads",
+        "2",
+        "--parallel-jobs",
+        "1",
+        "--platform",
+        "ILLUMINA",
+        "--library",
+        "libA",
+        "--min-depth",
+        "5",
+        "--min-allele-depth",
+        "4",
+        "--sample-count",
+        "1",
+        "--summary-output",
+        str(summary),
+        "--summary-script",
+        str(summary_script),
+        "--sample-sheet",
+        str(sample_sheet),
+    ]
+
+    result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    prepared_reference = project / "00-Reference" / "custom.fa"
+    assert prepared_reference.is_symlink()
+    assert prepared_reference.with_suffix(".fa.bwt").is_file()
+    assert (project / "00-Reference" / "custom.dict").is_file()
+    assert (variant_dir / "sample-A.g.vcf.gz").is_file()
+    assert (project / "04-Output" / "project-A.vcf.gz").is_file()
+    assert summary.is_file()
+    combine_line = next(
+        line
+        for line in gatk_log.read_text(encoding="utf-8").splitlines()
+        if line.startswith("CombineGVCFs ")
+    )
+    assert "sample-A.g.vcf.gz" in combine_line
+    assert "stale-sample.g.vcf.gz" not in combine_line
+
+    reference.write_text(">chr1\nACGTACGT\n", encoding="utf-8")
+    changed_reference_result = subprocess.run(
+        command, env=env, text=True, capture_output=True, check=False
+    )
+    assert changed_reference_result.returncode != 0
+    assert "prepared with a different reference" in changed_reference_result.stderr
+
+
+def test_fastq_to_vcf_schema_exposes_reference_and_hides_helper_scripts(tmp_path) -> None:
     tool = RunFastqToVcfTool(tmp_path)
     properties = tool.parameters["properties"]
 
     assert tool.parameters["required"] == ["fastq_dir"]
     assert set(properties) == {
         "fastq_dir",
+        "sample_sheet",
+        "reference_fasta",
         "project_id",
         "threads",
         "parallel_jobs",
+        "platform",
+        "library",
+        "min_depth",
+        "min_allele_depth",
         "output_dir",
     }
-    assert "reference_fasta" not in properties
     assert "filter_script" not in properties
     assert "stats_script" not in properties
 
@@ -1577,15 +2016,81 @@ async def test_fastq_to_vcf_reports_missing_managed_resource(
 
 
 @pytest.mark.asyncio
-async def test_fastq_to_vcf_rejects_public_reference_parameter(tmp_path) -> None:
-    tool = RunFastqToVcfTool(tmp_path)
+async def test_fastq_to_vcf_accepts_custom_reference(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    fastq_dir = workspace / "reads"
+    _write_fastq_pairs(fastq_dir, ["sample1"])
+    reference = workspace / "custom.fasta"
+    reference.write_text(">chr1\nACGT\n", encoding="utf-8")
+    tool = RunFastqToVcfTool(workspace)
+    monkeypatch.setattr(tool, "_get_environment_status", _fake_environment_status)
 
-    result = await tool.execute(
-        fastq_dir=str(tmp_path),
-        reference_fasta="/tmp/reference.fa",
+    prepared = await tool.prepare_run(
+        fastq_dir=str(fastq_dir),
+        reference_fasta=str(reference),
     )
 
-    assert result.startswith("Error: reference and helper-script paths are not public")
+    assert prepared.reference_fasta_path == reference
+    assert prepared.command[prepared.command.index("--reference-fasta") + 1] == str(reference)
+
+
+@pytest.mark.asyncio
+async def test_fastq_to_vcf_accepts_sample_sheet_with_arbitrary_filenames(
+    monkeypatch, tmp_path
+) -> None:
+    resources_root = tmp_path / "resources"
+    _write_fastq_to_vcf_resources(resources_root)
+    monkeypatch.setenv("EASYGS_RESOURCES_DIR", str(resources_root))
+    workspace = tmp_path / "workspace"
+    fastq_dir = workspace / "reads"
+    fastq_dir.mkdir(parents=True)
+    r1 = fastq_dir / "sample-A_R1.fastq.gz"
+    r2 = fastq_dir / "sample-A_R2.fastq.gz"
+    r1.write_bytes(b"test")
+    r2.write_bytes(b"test")
+    sample_sheet = workspace / "samples.tsv"
+    sample_sheet.write_text(
+        "sample_id\tr1\tr2\n"
+        "sample-A\treads/sample-A_R1.fastq.gz\treads/sample-A_R2.fastq.gz\n",
+        encoding="utf-8",
+    )
+    tool = RunFastqToVcfTool(workspace)
+    monkeypatch.setattr(tool, "_get_environment_status", _fake_environment_status)
+
+    prepared = await tool.prepare_run(
+        fastq_dir=str(fastq_dir),
+        sample_sheet=str(sample_sheet),
+        platform="ILLUMINA",
+        min_depth=7,
+        min_allele_depth=3,
+    )
+
+    assert prepared.sample_ids == ["sample-A"]
+    assert prepared.sample_sheet_path == sample_sheet
+    assert prepared.platform == "ILLUMINA"
+    assert prepared.min_depth == 7
+    assert prepared.min_allele_depth == 3
+    assert prepared.command[prepared.command.index("--sample-sheet") + 1] == str(sample_sheet)
+
+
+@pytest.mark.asyncio
+async def test_fastq_to_vcf_rejects_duplicate_sample_sheet_ids(tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    fastq_dir = workspace / "reads"
+    _write_fastq_pairs(fastq_dir, ["sample1"])
+    sample_sheet = workspace / "samples.tsv"
+    sample_sheet.write_text(
+        "sample_id\tr1\tr2\n"
+        "sample1\treads/sample1_1.fq.gz\treads/sample1_2.fq.gz\n"
+        "sample1\treads/sample1_1.fq.gz\treads/sample1_2.fq.gz\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Duplicate sample_id"):
+        await RunFastqToVcfTool(workspace).prepare_run(
+            fastq_dir=str(fastq_dir),
+            sample_sheet=str(sample_sheet),
+        )
 
 
 def test_fastq_to_vcf_workflow_is_registered(tmp_path) -> None:

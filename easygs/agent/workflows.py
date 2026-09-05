@@ -370,8 +370,9 @@ def build_analysis_workflows(
                 kind="fastq_to_vcf",
                 tool_name="fastq_to_vcf_analysis",
                 description=(
-                    "Run the maize B73 v4 paired-end FASTQ-to-VCF pipeline for any number "
-                    "of matched *_1.fq.gz and *_2.fq.gz sample pairs."
+                    "Run a configurable-reference, diploid paired-end short-read FASTQ-to-VCF "
+                    "pipeline. It uses the managed maize B73 v4 reference by default and also "
+                    "accepts an explicit reference FASTA and optional sample sheet."
                 ),
                 run_tool=fastq_to_vcf,
                 prepare_background_kwargs=_with_action_output_dir,
@@ -577,8 +578,9 @@ def build_analysis_workflows(
                 kind="genebody_locus_annotation",
                 tool_name="genebody_locus_annotation_analysis",
                 description=(
-                    "Annotate user-provided loci that fall inside maize V4 gene bodies "
-                    "using the built-in allV4gene.bed and export locus-to-gene pairs."
+                    "Annotate user-provided loci that fall inside maize, wheat, or rice gene "
+                    "bodies using the matching EasyGS gene-BED resource and export "
+                    "locus-to-gene pairs."
                 ),
                 run_tool=genebody_locus_annotation,
                 prepare_background_kwargs=_with_action_output_dir,

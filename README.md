@@ -18,7 +18,7 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 
 ## :raised_hands: Why EasyGS?
 
-- **Professional GS analysis capabilities**: 51 built-in analysis workflows covering FASTQ-to-VCF processing, data QC, population structure, genetic parameter estimation, genomic prediction, environmental interaction, GWAS, and functional annotation for maize, wheat, and rice.
+- **Professional GS analysis capabilities**: 40 GS analysis tools covering FASTQ-to-VCF processing, data QC, population structure, genetic parameter estimation, genomic prediction, environmental interaction, GWAS, and functional annotation for maize, wheat, and rice.
 - **Natural-language driven**: submit analysis tasks involving VCF files, phenotype data, environmental factors, gene annotation, and more through conversation without manually writing code.
 - **Long tasks run in the background**: tasks execute in the background, so you do not need to worry about interruptions.
 - **Fully traceable**: check analysis progress at any time, keep intermediate results for every step, and review the workflow whenever needed.
@@ -95,18 +95,18 @@ The one-command Docker installer described below is recommended for most users. 
 Install the latest released wheel directly from GitHub:
 
 ```bash
-pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.8-py3-none-any.whl
+pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.9/easygs-0.1.9-py3-none-any.whl
 ```
 
 You can also open the release page and download the wheel manually:
 
 - Latest release: <https://github.com/lukegood/EasyGS/releases/latest>
-- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.8-py3-none-any.whl>
+- Current wheel: <https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.9-py3-none-any.whl>
 
 After downloading the file, install it with:
 
 ```bash
-pip install /path/to/easygs-0.1.8-py3-none-any.whl
+pip install /path/to/easygs-0.1.9-py3-none-any.whl
 ```
 
 Confirm that the installation succeeded:
@@ -394,13 +394,14 @@ docker compose up -d
 
 Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected provider are configured. `EASYGS_MAX_TOKENS` and `EASYGS_REASONING_EFFORT` map to the default EasyGS agent configuration. Inside the container, use `/data/...` paths to refer to mounted data files. External reference resources are not bundled in the image; place them under the mounted `easygs-home/resources/` directory. For more details, see [container/README.md](container/README.md).
 
-## :clap: 51 GS Analysis Tools
+## :clap: 40 GS Analysis Tools
+
+40 GS analysis tools described in the manuscript and Table S1: 12 data QC tools, 5 population genetic structure tools, 8 genetic parameter estimation and genomic prediction tools, 5 environment and phenotype parsing tools, and 10 gene mining and functional interpretation tools.
 
 | Category | Function | Description |
 | --- | --- | --- |
-| Data QC | FASTQ-to-VCF (`fastq_to_vcf_analysis`) | Process any number of matched maize paired-end FASTQ samples into a jointly called VCF using the managed B73 v4 reference. |
+| Data QC | FASTQ-to-VCF (`fastq_to_vcf_analysis`) | Process diploid paired-end short-read resequencing data into a jointly called VCF using a user-specified reference genome or the default managed maize B73 v4 reference. |
 | Data QC | VCF statistics (`vcf_stats`) | Generate basic VCF statistics. |
-| Data QC | General VCFtools operations (`vcftools_analysis`) | Run structured VCFtools operations that are not covered by a more specific EasyGS workflow. |
 | Data QC | Allele frequency analysis (`allele_frequency_analysis`) | Use vcftools to analyze allele frequency and summarize the proportion of polymorphic sites. |
 | Data QC | MAF distribution analysis (`maf_distribution_analysis`) | Use PLINK to analyze minor allele frequency distribution. |
 | Data QC | Missingness analysis (`missingness_analysis`) | Use PLINK to analyze site or sample missingness. |
@@ -408,22 +409,14 @@ Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected 
 | Data QC | VCF format conversion (`vcf_format_conversion_analysis`) | Convert between VCF and PLINK BED/BIM/FAM or PED/MAP formats. |
 | Data QC | Genotype encoding (`genotype_encoding_analysis`) | Use PLINK to encode additive 0/1/2 genotypes. |
 | Data QC | VCF variant extraction (`vcf_variant_extract_analysis`) | Extract target subsets from VCF by variant or sample list. |
-| Data QC | PLINK BFILE extraction (`bfile_extract_analysis`) | Extract variants from a PLINK BED/BIM/FAM dataset into a new dataset. |
-| Data QC | Sample subset extraction (`sample_subset_analysis`) | Keep or remove specified samples and export the resulting dataset. |
-| Data QC | Locus subset extraction (`locus_subset_analysis`) | Keep or remove specified loci and export the resulting dataset. |
 | Data QC | LD pruning analysis (`ld_prune_analysis`) | Use PLINK for LD pruning. |
 | Data QC | Regional R2 analysis (`region_r2_analysis`) | Use PLINK for regional linkage disequilibrium R2 analysis. |
 | Data QC | Genotype imputation (`genotype_imputation_analysis`) | Use Beagle for genotype imputation. |
-| Population genetic structure | Allele count analysis (`allele_count_analysis`) | Count alleles and summarize the number of polymorphic sites. |
-| Population genetic structure | Allele frequency spectrum (`allele_frequency_spectrum_analysis`) | Calculate and summarize the allele frequency spectrum. |
 | Population genetic structure | Nucleotide diversity analysis (`nucleotide_diversity_analysis`) | Use vcftools to calculate site-level or window-based nucleotide diversity pi. |
-| Population genetic structure | Mean nucleotide diversity (`mean_nucleotide_diversity_analysis`) | Calculate mean nucleotide diversity from a `.sites.pi` file. |
-| Population genetic structure | Tajima's D (`tajima_d_analysis`) | Calculate Tajima's D in genomic windows. |
 | Population genetic structure | PCA analysis (`pca_analysis`) | Use PLINK for principal component analysis. |
 | Population genetic structure | ADMIXTURE analysis (`admixture_analysis`) | Use ADMIXTURE for population structure analysis and automatically determine the best K value. |
 | Population genetic structure | Genomic relationship matrix GRM (`grm_analysis`) | Use GCTA to construct a genomic relationship matrix. |
 | Population genetic structure | LD decay analysis (`ld_decay_analysis`) | Use PopLDdecay for linkage disequilibrium decay analysis. |
-| Population genetic structure | Population structure and kinship (`population_structure_kinship_analysis`) | Run LD pruning, PCA, GRM construction, and ADMIXTURE as one workflow. |
 | Genetic parameter estimation and genomic prediction | Heritability estimation (`heritability`) | Use GCTA to calculate single-trait heritability. |
 | Genetic parameter estimation and genomic prediction | Variance decomposition (`variance_decomposition_analysis`) | Use linear models to decompose phenotypic variance into genotype, environment, and residual components. |
 | Genetic parameter estimation and genomic prediction | Phenotype BLUP analysis (`phenotype_blup_analysis`) | Calculate BLUP values from multi-environment phenotype data. |
@@ -434,7 +427,6 @@ Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected 
 | Genetic parameter estimation and genomic prediction | Cross-validation grouping (`cvf_split_analysis`) | Generate cross-validation grouping CSV files from material lists. |
 | Environment and phenotype parsing | Environmental-factor correlation analysis (`env_factor_correlation_analysis`) | Calculate Pearson correlations among different environmental factors in the same region and draw a heatmap. |
 | Environment and phenotype parsing | Cross-region phenotypic correlation analysis (`phenotype_region_correlation_analysis`) | Calculate Pearson correlations for the same phenotype across different regions and draw a heatmap. |
-| Environment and phenotype parsing | Cross-region environmental correlation analysis (`env_region_correlation_analysis`) | Calculate correlations for environmental factors across regions and draw a heatmap. |
 | Environment and phenotype parsing | Environment index analysis (`environment_index_analysis`) | Run environment index analysis based on the CERIS framework. |
 | Environment and phenotype parsing | Reaction norm analysis (`reaction_norm_analysis`) | Convert multi-environment phenotype data to long format and calculate reaction norm intercepts and slopes. |
 | Environment and phenotype parsing | Genotype-by-environment GxE analysis (`gene_environment_interaction_analysis`) | Run SNP x environmental factor ANOVA from VCF, environmental factors, and phenotype data. |
@@ -442,12 +434,11 @@ Make sure `EASYGS_IMAGE`, `EASYGS_MODEL`, and the credentials for your selected 
 | Gene mining and functional interpretation | QEI detection analysis (`qei_detection_analysis`) | Use Fast3VmrMLM for multi-environment QEI detection. |
 | Gene mining and functional interpretation | Genotype-by-genotype GxG analysis (`locus_locus_interaction_analysis`) | Run SNP x SNP ANOVA from VCF and phenotype data. |
 | Gene mining and functional interpretation | Candidate gene extraction (`candidate_gene_extraction_analysis`) | Expand significant-locus windows and extract overlapping candidate genes for maize, wheat, or rice. |
-| Gene mining and functional interpretation | Gene function annotation (`gene_function_annotation_analysis`) | Run maize gene GO and KEGG functional enrichment analysis. |
-| Gene mining and functional interpretation | Wheat/rice GO and KEGG enrichment (`wheat_rice_gene_function_enrichment_analysis`) | Run offline GO or KEGG enrichment for wheat or rice using user-managed species databases. |
-| Gene mining and functional interpretation | Protein domain annotation (`protein_function_annotation_analysis`) | Use InterProScan for maize protein domain annotation. |
+| Gene mining and functional interpretation | Gene function annotation (`gene_function_annotation_analysis`; wheat/rice via `wheat_rice_gene_function_enrichment_analysis`) | Run GO and KEGG functional enrichment for maize, wheat, or rice using the corresponding species resources. |
+| Gene mining and functional interpretation | Protein domain annotation (`protein_function_annotation_analysis`; wheat/rice annotation via `pfam_enrichment_analysis`) | Retrieve candidate protein-domain annotations for maize, wheat, or rice from species-specific precomputed InterProScan resources. |
 | Gene mining and functional interpretation | PFAM domain enrichment (`pfam_enrichment_analysis`) | Run streaming protein-domain enrichment for maize, wheat, or rice. |
 | Gene mining and functional interpretation | Locus structure annotation (`peak_annotation_analysis`) | Use species-specific GFF3 resources to annotate maize, wheat, or rice BED intervals. |
-| Gene mining and functional interpretation | Maize gene-body locus annotation (`genebody_locus_annotation_analysis`) | Annotate SNPs located in gene regions of the maize B73 V4 reference genome. |
+| Gene mining and functional interpretation | Maize/wheat/rice gene-body locus annotation (`genebody_locus_annotation_analysis`) | Annotate SNPs located in gene regions using the matching species resource. |
 | Gene mining and functional interpretation | Ortholog extraction (`ortholog_extraction_analysis`) | Extract ortholog records from maize, wheat, or rice species matrices. |
 
 ## :bell: Common Commands
@@ -488,11 +479,15 @@ Some workflows require large reference files that are not packaged with EasyGS. 
 ~/.easygs/resources/
 ```
 
-Set `EASYGS_RESOURCES_DIR` to use a different resource root. Resource paths are resolved internally rather than exposed as normal tool parameters.
+Set `EASYGS_RESOURCES_DIR` to use a different resource root. Managed resources are resolved
+internally; workflows may additionally expose an explicit input override when scientifically
+appropriate, such as `reference_fasta` for FASTQ-to-VCF processing.
 
 ### FASTQ-to-VCF
 
-Place the maize B73 v4 reference and indexes under:
+For default operation, place the maize B73 v4 reference under the resource directory. Existing
+indexes are reused when available; missing BWA, FASTA, and sequence-dictionary indexes are
+prepared safely inside each project under `00-Reference/`:
 
 ```text
 ~/.easygs/resources/fastq_to_vcf_analysis/Zm-B73-REFERENCE-GRAMENE-4.0.fa
@@ -505,7 +500,12 @@ Place the maize B73 v4 reference and indexes under:
 ~/.easygs/resources/fastq_to_vcf_analysis/Zm-B73-REFERENCE-GRAMENE-4.0.dict
 ```
 
-The input directory may contain any number of matched `<sample_id>_1.fq.gz` and `<sample_id>_2.fq.gz` pairs. Outputs retain the `01-QC`, `02-Mapping`, `03-VariantCalling`, `04-Output`, and `logs` layout.
+The input directory may contain any number of matched `<sample_id>_1.fq.gz` and
+`<sample_id>_2.fq.gz` pairs. Alternatively, `sample_sheet` may point to a TSV with the exact
+columns `sample_id`, `r1`, and `r2`, which permits arbitrary paired-read filenames. Set
+`reference_fasta` to use another uncompressed `.fa`, `.fasta`, or `.fna` reference. The tool
+retains the default B73 workflow when this parameter is omitted. Outputs use the
+`00-Reference`, `01-QC`, `02-Mapping`, `03-VariantCalling`, `04-Output`, and `logs` layout.
 
 ### Candidate-gene extraction
 
@@ -516,6 +516,18 @@ The input directory may contain any number of matched `<sample_id>_1.fq.gz` and 
 ```
 
 The tool selects the correct gene BED from `species=maize/wheat/rice` and produces an expanded BED, a sorted unique gene list, detailed locus-to-gene matches, and a summary.
+
+### Genebody locus annotation
+
+```text
+~/.easygs/resources/genebody_locus_annotation_analysis/allV4gene.bed
+~/.easygs/resources/genebody_locus_annotation_analysis/allwheatgene.bed
+~/.easygs/resources/genebody_locus_annotation_analysis/allricegene.bed
+```
+
+The tool selects the correct gene BED from `species=maize/wheat/rice`, normalizes chromosome
+labels for matching, and retains each original locus ID in the locus-to-gene output. These
+resources must be real files rather than symbolic links.
 
 ### Protein annotation and PFAM enrichment
 

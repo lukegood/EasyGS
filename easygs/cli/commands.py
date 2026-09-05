@@ -286,6 +286,16 @@ def onboard():  # 初始化用户的easygs配置和工作区
             f"{candidate_gene_resource_dir}"
         )
 
+    genebody_resource_dir = resolve_user_resource_path(
+        "genebody_locus_annotation_analysis"
+    )
+    if not genebody_resource_dir.exists():
+        genebody_resource_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[green]✓[/green] Created genebody-locus resources directory at "
+            f"{genebody_resource_dir}"
+        )
+
     pfam_resource_dir = resolve_user_resource_path("pfam_enrichment_analysis")
     if not pfam_resource_dir.exists():
         pfam_resource_dir.mkdir(parents=True, exist_ok=True)

@@ -115,13 +115,7 @@ def _write_tables(gvcf: TextIO, stats_f: TextIO, geno_f: TextIO) -> None:
         het_rate = het_count / total_samples if total_samples else 0.0
         maf = 0.0
         if total_alleles > 0 and len(allele_counts) > 1:
-            nonref_freqs = [
-                count / total_alleles
-                for allele, count in allele_counts.items()
-                if allele != 0
-            ]
-            if nonref_freqs:
-                maf = min(nonref_freqs)
+            maf = min(count / total_alleles for count in allele_counts.values())
 
         stats_f.write(
             f"{chrom}\t{pos}\t{end}\t{generated_id}\t{ref}\t{alt_str}\t{site_type}\t"
