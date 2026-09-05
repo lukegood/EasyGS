@@ -7,17 +7,17 @@ usage() {
 Usage:
   genebody_locus_annotation.sh \
     --locus-list <locus_list.txt> \
+    --species <maize|wheat|rice> \
     --site-gene-output <site_gene.txt> \
     --gene-output <genes.txt> \
     --summary-output <summary.txt> \
     --summary-script <summarize_genebody_locus_annotation.py> \
-    --gene-bed <allV4gene.bed>
+    --gene-bed <species_gene.bed>
 
 Required tools:
   bedtools
   python3
   awk
-  sed
   cut
 
 Environment:
@@ -27,6 +27,7 @@ EOF
 }
 
 locus_list=""
+species=""
 site_gene_output=""
 gene_output=""
 summary_output=""
@@ -36,6 +37,7 @@ gene_bed=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --locus-list) locus_list="$2"; shift 2 ;;
+    --species) species="$2"; shift 2 ;;
     --site-gene-output) site_gene_output="$2"; shift 2 ;;
     --gene-output) gene_output="$2"; shift 2 ;;
     --summary-output) summary_output="$2"; shift 2 ;;
@@ -48,6 +50,7 @@ done
 
 for required in \
   "$locus_list" \
+  "$species" \
   "$site_gene_output" \
   "$gene_output" \
   "$summary_output" \
@@ -61,7 +64,12 @@ do
   fi
 done
 
-for tool in bedtools python3 awk sed cut; do
+case "$species" in
+  maize|wheat|rice) ;;
+  *) echo "Species must be maize, wheat, or rice: $species" >&2; exit 1 ;;
+esac
+
+for tool in bedtools python3 awk cut; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "Required tool not found on PATH: $tool" >&2
     exit 1
@@ -73,7 +81,7 @@ if [ ! -f "$locus_list" ]; then
   exit 1
 fi
 if [ ! -f "$gene_bed" ]; then
-  echo "Built-in gene BED not found: $gene_bed" >&2
+  echo "Gene BED resource not found: $gene_bed" >&2
   exit 1
 fi
 if [ ! -f "$summary_script" ]; then
@@ -85,16 +93,32 @@ mkdir -p "$(dirname "$site_gene_output")"
 mkdir -p "$(dirname "$gene_output")"
 mkdir -p "$(dirname "$summary_output")"
 
-awk -F '[.]s_' 'BEGIN{OFS="\t"} NF >= 2 {print $1, $2, $2 + 1, $0}' "$locus_list" \
-  | sed 's/chr//g' \
-  | bedtools intersect -a - -b "$gene_bed" -wa -wb \
-  | cut -f4,8 \
-  | sed 's/^/chr/g' > "$site_gene_output"
+normalized_loci="$(mktemp)"
+trap 'rm -f "$normalized_loci"' EXIT HUP INT TERM
+
+awk -v species="$species" -F '[.]s_' '
+  BEGIN {OFS="\t"}
+  /^[[:space:]]*($|#)/ {next}
+  {
+    original_locus = $0
+    sub(/\r$/, "", original_locus)
+    chromosome = $1
+    sub(/^[cC][hH][rR]/, "", chromosome)
+    if (species == "wheat" || species == "rice") {
+      chromosome = "Chr" chromosome
+    }
+    print chromosome, $2, $2 + 1, original_locus
+  }
+' "$locus_list" > "$normalized_loci"
+
+bedtools intersect -a "$normalized_loci" -b "$gene_bed" -wa -wb \
+  | cut -f4,8 > "$site_gene_output"
 
 cut -f2 "$site_gene_output" > "$gene_output"
 
 python3 "$summary_script" \
   --locus-list "$locus_list" \
+  --species "$species" \
   --gene-bed "$gene_bed" \
   --site-gene-output "$site_gene_output" \
   --gene-output "$gene_output" \

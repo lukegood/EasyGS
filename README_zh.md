@@ -17,7 +17,7 @@
 EasyGS是一个面向作物基因组选择分析的AIAgent。用户可以用自然语言描述分析需求，EasyGS会协助检查输入文件、补全参数、调用经人工验证的GS分析流程，并整理输出结果，帮助您完成GS分析任务。
 
 ## :raised_hands: 为什么选择EasyGS?
-- **专业的GS分析能力**：51种内置分析流程，覆盖 FASTQ 到 VCF、数据质控、群体结构、遗传参数估计、基因组预测、环境互作、GWAS，以及玉米、小麦和水稻功能注释等常用环节。
+- **专业的GS分析能力**：40种GS分析工具，覆盖 FASTQ 到 VCF、数据质控、群体结构、遗传参数估计、基因组预测、环境互作、GWAS，以及玉米、小麦和水稻功能注释等常用环节。
 - **自然语言驱动**：用对话方式提交VCF、表型、环境因子、基因注释等分析任务，无需手工编写代码。
 - **长任务后台运行**：任务后台执行，不担心中断。
 - **全程可追溯**：随时查看分析进展，保留每一步的中间结果，可随时复盘。
@@ -94,18 +94,18 @@ EasyGS是一个面向作物基因组选择分析的AIAgent。用户可以用自�
 直接从 GitHub Release 安装最新版 wheel：
 
 ```bash
-pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.8-py3-none-any.whl
+pip install https://github.com/lukegood/EasyGS/releases/download/v0.1.9/easygs-0.1.9-py3-none-any.whl
 ```
 
 也可以打开发布页面手动下载 wheel：
 
 - 最新发布页面：<https://github.com/lukegood/EasyGS/releases/latest>
-- 当前 wheel：<https://github.com/lukegood/EasyGS/releases/download/v0.1.8/easygs-0.1.8-py3-none-any.whl>
+- 当前 wheel：<https://github.com/lukegood/EasyGS/releases/download/v0.1.9/easygs-0.1.9-py3-none-any.whl>
 
 下载完成后，在本地安装：
 
 ```bash
-pip install /path/to/easygs-0.1.8-py3-none-any.whl
+pip install /path/to/easygs-0.1.9-py3-none-any.whl
 ```
 
 确认安装成功：
@@ -393,13 +393,14 @@ docker compose up -d
 
 请确认 `EASYGS_IMAGE`、`EASYGS_MODEL` 和所选 provider 的凭证已经配置。`EASYGS_MAX_TOKENS` 和 `EASYGS_REASONING_EFFORT` 会映射到 EasyGS 默认 Agent 配置。容器内请使用 `/data/...` 路径引用挂载的数据文件。外部参考资源不会打包进镜像，应放在挂载的 `easygs-home/resources/` 目录下。更多说明见 [container/README.md](container/README.md)。
 
-## :clap: 51种GS分析工具
+## :clap: 40种GS分析工具
+
+EasyGS支持的40种GS分析工具：数据质控12种、群体遗传结构5种、遗传参数估计与基因组预测8种、环境与表型数据解析5种、基因挖掘与功能解析10种。
 
 | 类别 | 功能 | 说明 |
 | --- | --- | --- |
-| 数据质控 | FASTQ 到 VCF (`fastq_to_vcf_analysis`) | 使用托管的 B73 v4 参考基因组，将任意数量的玉米双端 FASTQ 配对样本处理为联合分型 VCF。 |
+| 数据质控 | FASTQ 到 VCF (`fastq_to_vcf_analysis`) | 使用用户指定的参考基因组或默认托管的玉米 B73 v4 参考基因组，将二倍体双端短读长重测序数据处理为联合分型 VCF。 |
 | 数据质控 | VCF统计 (`vcf_stats`) | 生成 VCF 基本统计信息。 |
-| 数据质控 | 通用 VCFtools 操作 (`vcftools_analysis`) | 执行未被更具体 EasyGS 流程覆盖的结构化 VCFtools 操作。 |
 | 数据质控 | 等位基因频率分析 (`allele_frequency_analysis`) | 使用 vcftools 分析等位基因频率，统计多态性位点比例。 |
 | 数据质控 | MAF分布分析 (`maf_distribution_analysis`) | 使用 PLINK 分析最小等位基因频率分布。 |
 | 数据质控 | 缺失率分析 (`missingness_analysis`) | 使用 PLINK 分析位点或样本缺失率。 |
@@ -407,22 +408,14 @@ docker compose up -d
 | 数据质控 | VCF格式转换 (`vcf_format_conversion_analysis`) | 实现 VCF 与 PLINK BED/BIM/FAM、PED/MAP 格式互转。 |
 | 数据质控 | 基因型编码 (`genotype_encoding_analysis`) | 使用 PLINK 编码 0/1/2 加性基因型。 |
 | 数据质控 | VCF变体提取 (`vcf_variant_extract_analysis`) | 基于位点或材料列表从 VCF 中提取目标子集。 |
-| 数据质控 | PLINK BFILE 提取 (`bfile_extract_analysis`) | 从 PLINK BED/BIM/FAM 数据集中提取位点并生成新数据集。 |
-| 数据质控 | 样本子集提取 (`sample_subset_analysis`) | 保留或移除指定样本并导出结果数据集。 |
-| 数据质控 | 位点子集提取 (`locus_subset_analysis`) | 保留或移除指定位点并导出结果数据集。 |
 | 数据质控 | LD剪枝分析 (`ld_prune_analysis`) | 使用 PLINK 进行 LD 剪枝。 |
 | 数据质控 | 区域R²分析 (`region_r2_analysis`) | 使用 PLINK 进行区域连锁不平衡 R² 分析。 |
 | 数据质控 | 基因型填充 (`genotype_imputation_analysis`) | 使用 Beagle 进行基因型填充。 |
-| 群体遗传结构 | 等位基因计数 (`allele_count_analysis`) | 统计等位基因计数和多态位点数量。 |
-| 群体遗传结构 | 等位基因频谱 (`allele_frequency_spectrum_analysis`) | 计算并汇总等位基因频率谱。 |
 | 群体遗传结构 | 核苷酸多样性分析 (`nucleotide_diversity_analysis`) | 使用 vcftools 计算位点或窗口核苷酸多样性 π。 |
-| 群体遗传结构 | 平均核苷酸多样性 (`mean_nucleotide_diversity_analysis`) | 从 `.sites.pi` 文件计算平均核苷酸多样性。 |
-| 群体遗传结构 | Tajima's D (`tajima_d_analysis`) | 按基因组窗口计算 Tajima's D。 |
 | 群体遗传结构 | PCA分析 (`pca_analysis`) | 使用 PLINK 进行主成分分析。 |
 | 群体遗传结构 | ADMIXTURE分析 (`admixture_analysis`) | 使用 ADMIXTURE 进行群体结构分析，自动确定最佳 K 值。 |
 | 群体遗传结构 | 基因组关系矩阵GRM (`grm_analysis`) | 使用 GCTA 构建基因组关系矩阵。 |
 | 群体遗传结构 | LD衰减分析 (`ld_decay_analysis`) | 使用 PopLDdecay 进行连锁不平衡衰减分析。 |
-| 群体遗传结构 | 群体结构与亲缘关系 (`population_structure_kinship_analysis`) | 在一个流程中依次执行 LD 剪枝、PCA、GRM 和 ADMIXTURE。 |
 | 遗传参数估计与基因组预测 | 遗传力估计 (`heritability`) | 使用 GCTA 计算单性状遗传力。 |
 | 遗传参数估计与基因组预测 | 方差分解 (`variance_decomposition_analysis`) | 利用线性模型将表型方差分解为基因型、环境和残差组分。 |
 | 遗传参数估计与基因组预测 | 表型BLUP分析 (`phenotype_blup_analysis`) | 基于多环境表型数据计算 BLUP 值。 |
@@ -433,7 +426,6 @@ docker compose up -d
 | 遗传参数估计与基因组预测 | 交叉验证分组 (`cvf_split_analysis`) | 基于材料列表生成交叉验证分组 CSV。 |
 | 环境与表型数据解析 | 环境因子相关性分析 (`env_factor_correlation_analysis`) | 计算同地区不同环境因子的 Pearson 相关性并绘制热图。 |
 | 环境与表型数据解析 | 跨区域表型相关性分析 (`phenotype_region_correlation_analysis`) | 计算不同地区同一表型的 Pearson 相关性并绘制热图。 |
-| 环境与表型数据解析 | 跨区域环境相关性分析 (`env_region_correlation_analysis`) | 计算不同地区环境因子的相关性并绘制热图。 |
 | 环境与表型数据解析 | 环境指数分析 (`environment_index_analysis`) | 基于 CERIS 框架执行环境指数分析。 |
 | 环境与表型数据解析 | 反应规范分析 (`reaction_norm_analysis`) | 将多环境表型转为长格式，计算反应规范截距和斜率。 |
 | 环境与表型数据解析 | 基因型-环境GxE分析 (`gene_environment_interaction_analysis`) | 基于 VCF、环境因子和表型进行 SNP x 环境因子 ANOVA。 |
@@ -441,13 +433,12 @@ docker compose up -d
 | 基因挖掘与功能解析 | QEI检测分析 (`qei_detection_analysis`) | 使用 Fast3VmrMLM 进行多环境 QEI 检测。 |
 | 基因挖掘与功能解析 | 基因型-基因型GxG分析 (`locus_locus_interaction_analysis`) | 基于 VCF 和表型进行 SNP x SNP ANOVA。 |
 | 基因挖掘与功能解析 | 候选基因提取 (`candidate_gene_extraction_analysis`) | 扩展显著位点窗口，提取玉米、小麦或水稻区间内的候选基因。 |
-| 基因挖掘与功能解析 | 基因功能注释 (`gene_function_annotation_analysis`) | 进行玉米基因 GO 与 KEGG 功能富集分析。 |
-| 基因挖掘与功能解析 | 小麦/水稻 GO 与 KEGG 富集 (`wheat_rice_gene_function_enrichment_analysis`) | 使用用户管理的物种数据库进行小麦或水稻离线 GO/KEGG 富集。 |
-| 基因挖掘与功能解析 | 蛋白结构域注释 (`protein_function_annotation_analysis`) | 使用 InterProScan 进行玉米蛋白质结构域注释。 |
+| 基因挖掘与功能解析 | 基因功能注释（`gene_function_annotation_analysis`；小麦/水稻通过 `wheat_rice_gene_function_enrichment_analysis`） | 使用相应物种资源对玉米、小麦或水稻进行 GO 与 KEGG 功能富集分析。 |
+| 基因挖掘与功能解析 | 蛋白结构域注释（`protein_function_annotation_analysis`；小麦/水稻注释通过 `pfam_enrichment_analysis`） | 从物种对应的预计算 InterProScan 资源中提取玉米、小麦或水稻候选蛋白的结构域注释。 |
 | 基因挖掘与功能解析 | PFAM结构域富集 (`pfam_enrichment_analysis`) | 对玉米、小麦或水稻进行流式蛋白结构域富集分析。 |
 | 基因挖掘与功能解析 | 位点结构注释 (`peak_annotation_analysis`) | 使用物种对应 GFF3 对玉米、小麦或水稻 BED 区间进行结构注释。 |
-| 基因挖掘与功能解析 | 玉米基因体位点注释 (`genebody_locus_annotation_analysis`) | 注释位于玉米 B73 V4 参考基因组基因区的 SNP。 |
-| 基因挖掘与功能解析 | 同源基因提取 (`ortholog_extraction_analysis`) | 从玉米、小麦或水稻物种矩阵中提取同源基因记录。 |
+| 基因挖掘与功能解析 | 玉米/小麦/水稻基因体位点注释 (`genebody_locus_annotation_analysis`) | 使用对应物种资源注释位于基因区的 SNP。 |
+| 基因挖掘与功能解析 | 直系同源基因提取 (`ortholog_extraction_analysis`) | 从玉米、小麦或水稻物种矩阵中提取直系同源基因记录。 |
 
 ## :bell: 常用命令
 
@@ -487,11 +478,13 @@ EasyGS 区分普通聊天和分析型使用。科学分析工作流默认启用 
 ~/.easygs/resources/
 ```
 
-可以通过 `EASYGS_RESOURCES_DIR` 修改资源根目录。资源文件路径由工具内部解析，不作为普通工具参数暴露给用户。
+可以通过 `EASYGS_RESOURCES_DIR` 修改资源根目录。托管资源由工具内部解析；在分析上合理时，
+工作流也可以开放明确的输入覆盖参数，例如 FASTQ 到 VCF 的 `reference_fasta`。
 
 ### FASTQ 到 VCF
 
-将玉米 B73 v4 参考基因组及索引放在：
+默认运行时，将玉米 B73 v4 参考基因组放在资源目录中。若已有索引则直接复用；缺少的
+BWA、FASTA 和序列字典索引会在各项目的 `00-Reference/` 中安全建立：
 
 ```text
 ~/.easygs/resources/fastq_to_vcf_analysis/Zm-B73-REFERENCE-GRAMENE-4.0.fa
@@ -504,7 +497,11 @@ EasyGS 区分普通聊天和分析型使用。科学分析工作流默认启用 
 ~/.easygs/resources/fastq_to_vcf_analysis/Zm-B73-REFERENCE-GRAMENE-4.0.dict
 ```
 
-输入目录可包含任意数量的 `<sample_id>_1.fq.gz` 和 `<sample_id>_2.fq.gz` 配对样本。输出保留 `01-QC`、`02-Mapping`、`03-VariantCalling`、`04-Output` 和 `logs` 目录结构。
+输入目录可包含任意数量的 `<sample_id>_1.fq.gz` 和 `<sample_id>_2.fq.gz` 配对样本。
+也可以通过 `sample_sheet` 提供列名严格为 `sample_id`、`r1`、`r2` 的 TSV，从而使用
+任意双端 FASTQ 文件名。通过 `reference_fasta` 可以指定其他未压缩的 `.fa`、`.fasta`
+或 `.fna` 参考基因组；不指定时仍使用默认 B73 流程。输出目录包括 `00-Reference`、
+`01-QC`、`02-Mapping`、`03-VariantCalling`、`04-Output` 和 `logs`。
 
 ### 候选基因提取
 
@@ -515,6 +512,17 @@ EasyGS 区分普通聊天和分析型使用。科学分析工作流默认启用 
 ```
 
 工具根据 `species=maize/wheat/rice` 自动选择基因 BED，输出扩展 BED、排序去重的候选基因列表、详细位点与基因匹配表和摘要。
+
+### Genebody 区基因抓取
+
+```text
+~/.easygs/resources/genebody_locus_annotation_analysis/allV4gene.bed
+~/.easygs/resources/genebody_locus_annotation_analysis/allwheatgene.bed
+~/.easygs/resources/genebody_locus_annotation_analysis/allricegene.bed
+```
+
+工具根据 `species=maize/wheat/rice` 自动选择对应基因 BED，在匹配时规范化染色体名称，
+并在位点与基因对应表中保留用户输入的原始位点 ID。上述资源必须是真实文件，不能使用符号链接。
 
 ### 蛋白注释与 PFAM 富集
 

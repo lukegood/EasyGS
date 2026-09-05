@@ -56,6 +56,7 @@ def test_onboard_fresh_install(mock_paths):
     assert (workspace_dir / "memory" / "MEMORY.md").exists()
     assert Path("test_onboard_data/resources/fastq_to_vcf_analysis").is_dir()
     assert Path("test_onboard_data/resources/candidate_gene_extraction_analysis").is_dir()
+    assert Path("test_onboard_data/resources/genebody_locus_annotation_analysis").is_dir()
     assert Path("test_onboard_data/resources/wheat_rice_gene_function_enrichment_analysis").is_dir()
     assert Path("test_onboard_data/resources/peak_annotation_analysis").is_dir()
     assert Path("test_onboard_data/resources/ortholog_extraction_analysis").is_dir()

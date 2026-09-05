@@ -28,11 +28,11 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | `env_factor_correlation_analysis` | Compute region-specific environmental-factor correlations and render a heatmap |
 | `environment_index_analysis` | Run the CERIS-style environment index workflow from EnvPheno text inputs |
 | `env_region_correlation_analysis` | Compute cross-region correlations from combined environmental-factor profiles |
-| `fastq_to_vcf_analysis` | Run the maize B73 v4 paired-end FASTQ-to-VCF pipeline for any number of matched sample pairs |
+| `fastq_to_vcf_analysis` | Run a configurable-reference diploid paired-end short-read FASTQ-to-VCF pipeline, using managed maize B73 v4 by default |
 | `gene_environment_interaction_analysis` | Run SNP-by-environment-factor interaction ANOVA from a VCF and EnvPheno CSV inputs |
 | `gene_function_annotation_analysis` | Run maize GO/KEGG enrichment from a gene list TXT using built-in Zm V4 gene-to-ENTREZ mapping |
 | `wheat_rice_gene_function_enrichment_analysis` | Run offline GO and/or KEGG enrichment for wheat or rice using user-managed species resources |
-| `genebody_locus_annotation_analysis` | Annotate locus IDs that fall inside maize V4 gene bodies using the built-in allV4gene.bed |
+| `genebody_locus_annotation_analysis` | Annotate locus IDs that fall inside maize, wheat, or rice gene bodies using species resources |
 | `gebv_analysis` | Estimate genomic breeding values from a GRM prefix and phenotype file |
 | `genotype_encoding_analysis` | Run PLINK `--recodeA` to encode genotypes as a 0/1/2 additive matrix |
 | `gwas_analysis` | Run rMVP GWAS from a PLINK BFILE prefix, phenotype CSV, and kinship TXT |

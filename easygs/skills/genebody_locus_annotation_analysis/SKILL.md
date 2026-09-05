@@ -1,21 +1,24 @@
 ---
 name: genebody_locus_annotation_analysis
-description: Annotate loci that fall inside maize V4 gene bodies from a locus-list TXT using the built-in allV4gene.bed and the genebody_locus_annotation_analysis tool.
+description: Annotate loci that fall inside maize, wheat, or rice gene bodies using species gene-BED resources.
 metadata: {"easygs":{"emoji":"🌱","os":["linux"]}}
 ---
 
 # Genebody Locus Annotation Skill
 
-Annotate user-provided loci that fall inside maize V4 gene bodies using the built-in `genebody_locus_annotation_analysis` tool.
+Annotate user-provided loci that fall inside maize, wheat, or rice gene bodies using the
+`genebody_locus_annotation_analysis` tool.
 
 This is one complete workflow:
 
 1. read the user-provided locus list
-2. convert locus IDs such as `chr1.s_201492` to single-base BED intervals
-3. intersect those intervals with the built-in `allV4gene.bed`
-4. write locus-to-gene pairs for genebody hits
-5. write the corresponding gene list
-6. write a compact summary
+2. select the gene-BED resource for the requested species
+3. convert locus IDs such as `chr1.s_201492` to single-base intervals while normalizing only
+   the chromosome field
+4. intersect those intervals with the selected gene-BED resource
+5. write locus-to-gene pairs for genebody hits
+6. write the corresponding gene list
+7. write a compact summary
 
 ## Tool-First Rule
 
@@ -25,15 +28,13 @@ Use `genebody_locus_annotation_analysis(...)` for execution.
 
 The bundled pipeline follows this logic:
 
-```sh
-awk -F '[.]s_' '{print $1"\t"$2"\t"$2+1"\t"$0}' locus_list.txt \
-  | sed 's/chr//g' \
-  | bedtools intersect -a - -b allV4gene.bed -wa -wb \
-  | cut -f4,8 \
-  | sed 's/^/chr/g'
+```text
+locus list -> species-aware chromosome normalization -> bedtools intersect
+           -> locus-to-gene pairs -> gene list -> summary
 ```
 
-Then it writes the second column of the locus-to-gene output as the gene list.
+The original locus ID is retained in the output. Only the temporary chromosome field used by
+`bedtools` is normalized, so `chr1`, `Chr1`, and `1` can be matched to the selected resource.
 
 ## Required Inputs
 
@@ -47,14 +48,30 @@ chr1.s_294503
 chr1.s_323280
 ```
 
-The gene-body BED file is built in:
+## Resources
 
-- `allV4gene.bed`
+The tool selects one real resource file from:
 
-Do not ask the user to provide `allV4gene.bed`.
+```text
+~/.easygs/resources/genebody_locus_annotation_analysis/
+├── allV4gene.bed
+├── allwheatgene.bed
+└── allricegene.bed
+```
+
+The mapping is:
+
+- `maize` -> `allV4gene.bed`
+- `wheat` -> `allwheatgene.bed`
+- `rice` -> `allricegene.bed`
+
+`EASYGS_RESOURCES_DIR` may override the resource root. Each resource must be a real regular file,
+not a symbolic link, with chromosome, start, end, and gene ID in columns 1 to 4. Do not ask the
+user to provide a gene-BED path.
 
 ## Optional Parameters
 
+- `species`: `maize`, `wheat`, or `rice`; default: `maize`
 - `output_dir`: output directory; when omitted, the runtime supplies the default for the current context
 
 Default outputs:
@@ -72,13 +89,16 @@ The tool checks the required environment:
 Behavior rules:
 
 - The tool stops if `EasyGS_2` is missing
-- The tool stops if `bedtools`, `python3`, `awk`, `sed`, or `cut` is not available inside `EasyGS_2`
-- The built-in `allV4gene.bed` must exist inside the skill scripts directory
+- The tool stops if `bedtools`, `python3`, `awk`, or `cut` is not available inside `EasyGS_2`
+- The selected species gene-BED must exist in the resource directory and must be a real file
+- Locus chromosome labels must occur in the selected resource after optional `chr` normalization
 - The locus list must be supplied by the user and must not be invented
 
 ## Parameter Collection Rules
 
-Before calling `genebody_locus_annotation_analysis(...)`, collect the required `locus_list` path unless it is already available in the conversation.
+Before calling `genebody_locus_annotation_analysis(...)`, collect the required `locus_list` path
+and species unless they are already available in the conversation. Keep `maize` as the default
+when the user does not specify a species.
 
 When asking for the required file, always provide the input example above and explain that each line should be one locus ID such as `chr1.s_201492`.
 
@@ -89,4 +109,5 @@ After a successful run, highlight:
 - the locus-to-gene output path
 - the gene list output path
 - the summary path
+- the selected species
 - the number of genebody site-gene pairs and unique genes when inferable

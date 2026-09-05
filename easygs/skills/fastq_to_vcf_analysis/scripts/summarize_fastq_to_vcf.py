@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize the outputs of the maize FASTQ-to-VCF pipeline."""
+"""Summarize the outputs of the paired-end FASTQ-to-VCF pipeline."""
 
 from __future__ import annotations
 
@@ -11,7 +11,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize FASTQ-to-VCF outputs.")
     parser.add_argument("--project-id", required=True)
     parser.add_argument("--fastq-dir", required=True)
+    parser.add_argument("--sample-count", required=True, type=int)
+    parser.add_argument("--sample-sheet", default="")
     parser.add_argument("--reference-fasta", required=True)
+    parser.add_argument("--prepared-reference", required=True)
+    parser.add_argument("--platform", required=True)
+    parser.add_argument("--library", required=True)
+    parser.add_argument("--min-depth", required=True, type=int)
+    parser.add_argument("--min-allele-depth", required=True, type=int)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--threads", required=True, type=int)
     parser.add_argument("--parallel-jobs", required=True, type=int)
@@ -32,21 +39,25 @@ def _size_text(path: Path) -> str:
 
 def main() -> int:
     args = parse_args()
-    fastq_dir = Path(args.fastq_dir)
     output_dir = Path(args.output_dir)
     final_dir = output_dir / "04-Output"
     final_vcf = final_dir / f"{args.project_id}.vcf.gz"
     final_index = final_dir / f"{args.project_id}.vcf.gz.tbi"
     stats_path = final_dir / "snp_statistics.tsv"
     genotypes_path = final_dir / "genotypes.tsv"
-    r1_files = sorted(fastq_dir.glob("*_1.fq.gz"))
 
     lines = [
         "=== FASTQ to VCF ===",
         f"Project ID: {args.project_id}",
-        f"FASTQ directory: {fastq_dir}",
-        f"Samples: {len(r1_files)}",
-        f"Reference FASTA: {args.reference_fasta}",
+        f"FASTQ directory: {args.fastq_dir}",
+        f"Sample sheet: {args.sample_sheet or 'automatic filename discovery'}",
+        f"Samples: {args.sample_count}",
+        f"Source reference FASTA: {args.reference_fasta}",
+        f"Prepared reference FASTA: {args.prepared_reference}",
+        f"Read-group platform: {args.platform}",
+        f"Read-group library: {args.library}",
+        f"Minimum genotype depth: {args.min_depth}",
+        f"Minimum heterozygous allele depth: {args.min_allele_depth}",
         f"Threads: {args.threads}",
         f"Parallel jobs: {args.parallel_jobs}",
         f"Output directory: {output_dir}",
