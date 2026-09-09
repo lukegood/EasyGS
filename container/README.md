@@ -8,7 +8,7 @@ For an automated source checkout, image build, and service start, use the
 repository-level `install.sh`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | bash
+curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | bash
 ```
 
 The image builds the current EasyGS source and WebUI together with five analysis

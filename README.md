@@ -82,15 +82,54 @@ EasyGS is an AI agent for crop genomic selection analysis. Users can describe th
 > [!WARNING]
 > EasyGS is an AI Agent that can execute analysis tasks and may create, modify, or delete files. Use it in a test or dedicated working directory, and back up important data in advance. Direct production use is not recommended.
 
-The one-command Docker installer described below is recommended for most users. The native installation steps in this section remain available for developers and users who prefer to manage Python, conda, and analysis dependencies themselves.
+The one-command installer is recommended for most users. Developers and users who prefer to manage Python, conda, and analysis dependencies themselves can continue with the "Native Installation" section.
 
-### 1. Requirements
+### 1. Recommended: One-command Installation
+
+The one-command installer checks host dependencies, clones or updates EasyGS, interactively configures the model provider, builds the image, and starts the service.
+
+Requirements:
+
+- Linux x86_64 with Bash and curl
+- Git, Docker Engine, and Docker Compose
+- A working LLM provider and API key
+
+```bash
+curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | bash
+```
+
+The default installation directory is `~/easygs`. To select the install directory, data directory, or Git ref:
+
+```bash
+curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | \
+  bash -s -- --install-dir "$HOME/apps/easygs" --data-dir "$HOME/easygs-data" --ref master
+```
+
+To skip the local build, pull the published image directly:
+
+```bash
+curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | \
+  bash -s -- --image cloudcollector/easygs:latest
+```
+
+For unattended servers or CI, use `--non-interactive`. To also allow installation of missing host dependencies:
+
+```bash
+curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | \
+  bash -s -- --install-deps --non-interactive
+```
+
+The installer stores deployment settings in `~/easygs/.env`.
+
+### 2. Native Installation (Developers)
+
+#### 2.1 Requirements
 
 - Python 3.11 or newer
 - conda or mamba
 - An available LLM API key
 
-### 2. Install EasyGS
+#### 2.2 Install EasyGS
 
 Install the latest released wheel directly from GitHub:
 
@@ -115,7 +154,7 @@ Confirm that the installation succeeded:
 easygs --version
 ```
 
-### 3. Install Analysis Dependencies
+#### 2.3 Install Analysis Dependencies
 
 EasyGS analysis tools depend on several conda environments. Download the source code from the release page, or clone the repository, then use the `env_all/` directory to create the environments:
 
@@ -134,7 +173,7 @@ conda env create -f env_all/EasyGS_5.yml
 
 If an environment already exists, you can skip the corresponding command. `EasyGS_5` provides the fastp, BWA, samtools, Picard, GATK, bcftools, bgzip, and tabix dependencies used by `fastq_to_vcf_analysis`.
 
-### 4. Initialize Configuration
+#### 2.4 Initialize Configuration
 
 ```bash
 easygs onboard
@@ -148,7 +187,7 @@ This command creates the default configuration file and workspace:
 ~/.easygs/resources/
 ```
 
-### 5. Configure the Model and Workspace
+#### 2.5 Configure the Model and Workspace
 
 Open the configuration file:
 
@@ -158,7 +197,7 @@ nano ~/.easygs/config.json
 
 You can also use your preferred editor, such as VS Code, vim, or a text editor available on your server.
 
-#### 5.1 Configure the LLM Provider
+##### 2.5.1 Configure the LLM Provider
 
 First decide which model provider you want to use, then configure only that provider. Common provider names include:
 
@@ -173,7 +212,7 @@ First decide which model provider you want to use, then configure only that prov
 
 Your configuration file may already contain multiple provider sections. Providers you do not use can be left empty.
 
-#### 5.2 Fill Provider Credentials
+##### 2.5.2 Fill Provider Credentials
 
 Under the provider you selected, fill in `apiKey` and `apiBase`. `apiKey` is the provider key, and `apiBase` is the API address provided by the provider or gateway.
 
@@ -203,7 +242,7 @@ If you use a custom compatible endpoint, fill in `apiKey` and `apiBase` under `c
 }
 ```
 
-#### 5.3 Configure the Default Model
+##### 2.5.3 Configure the Default Model
 
 After configuring the provider, set `agents.defaults.model`. The model name should match the provider:
 
@@ -232,7 +271,7 @@ For example, when using DeepSeek V4 Pro, set the model, generation limit, and re
 
 `maxTokens` controls the maximum generation length for a single response, and `reasoningEffort` sets the reasoning intensity for DeepSeek V4 Pro. DeepSeek V4 models support up to 1M context and up to 384000 output tokens on the model side. EasyGS does not expose a `contextWindow` control; it passes the current conversation, tool results, and analysis context to the selected model.
 
-#### 5.4 Save and Check the Configuration
+##### 2.5.4 Save and Check the Configuration
 
 After saving `~/.easygs/config.json`, run:
 
@@ -246,7 +285,7 @@ If the status output says the provider is not configured, check:
 - Whether the corresponding `providers.<name>.apiBase` has been filled with the complete API address provided by the provider or gateway.
 - Whether `agents.defaults.model` is set to the model name for the corresponding provider.
 
-### 6. Enable the Web UI and Start Using EasyGS
+#### 2.6 Enable the Web UI and Start Using EasyGS
 
 The Web UI is recommended as the default interaction mode. First enable websocket in `~/.easygs/config.json`:
 
@@ -318,43 +357,6 @@ easygs agent
 ## :whale: Using Docker
 
 Docker is the recommended way to run EasyGS because the image packages EasyGS together with all five analysis environments. Users only need to mount a persistent EasyGS home directory and a data directory.
-
-Requirements:
-
-- Linux x86_64 with Bash and curl
-- Git, Docker Engine, and Docker Compose
-- A working LLM provider and API key
-
-### One-command installation
-
-The repository-level installer checks host dependencies, clones or updates EasyGS, interactively configures the model provider, builds the image, and starts the service:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | bash
-```
-
-The default installation directory is `~/easygs`. To select the install directory, data directory, or Git ref:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-  bash -s -- --install-dir "$HOME/apps/easygs" --data-dir "$HOME/easygs-data" --ref master
-```
-
-After a public image is published, the same installer can skip the local build:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-  bash -s -- --image cloudcollector/easygs:latest
-```
-
-For unattended servers or CI, use `--non-interactive`. To also allow installation of missing host dependencies:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
-  bash -s -- --install-deps --non-interactive
-```
-
-The installer stores deployment settings in `~/easygs/.env`. Running it again updates the source and container while preserving model, API key, Feishu/Lark, and email settings. It does not silently install missing host dependencies, and all Mamba, R, and bioinformatics dependencies remain inside the image.
 
 ### Manual Docker Compose setup
 

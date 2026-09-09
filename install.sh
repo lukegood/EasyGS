@@ -61,10 +61,10 @@ Environment equivalents:
   EASYGS_INSTALL_DEPS (ask, yes, or no)
 
 Examples:
-  curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | bash
-  curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
+  curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | bash
+  curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | \
     bash -s -- --image cloudcollector/easygs:latest
-  curl -fsSL https://raw.githubusercontent.com/lukegood/EasyGS/master/install.sh | \
+  curl -fsSL https://github.com/lukegood/EasyGS/raw/refs/heads/master/install.sh | \
     bash -s -- --install-deps --non-interactive
 EOF
 }
